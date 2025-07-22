@@ -18,9 +18,10 @@ const Index = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load initial data from backend
+  // Load initial data from backend and poll for updates
   useEffect(() => {
     const loadUsers = async () => {
+      setLoading(true);
       try {
         const response = await fetch('http://localhost:3001/api/users');
         if (response.ok) {
@@ -28,58 +29,29 @@ const Index = () => {
           setUsers(usersData);
         } else {
           console.error('Failed to load users');
+          toast({
+            title: "Error",
+            description: "Could not fetch users.",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error('Error loading users:', error);
+        toast({
+          title: "Error",
+          description: "Could not connect to the server.",
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
     };
 
-    loadUsers();
-  }, []);
+    loadUsers(); // Initial load
 
-  // Set up webhook listener for Clerk signups
-  useEffect(() => {
-    const handleClerkWebhook = async () => {
-      try {
-        // Listen for webhook notifications from Clerk
-        const eventSource = new EventSource('/api/clerk-webhooks');
-        
-        eventSource.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          if (data.type === 'user.created') {
-            const newUser: User = {
-              id: data.data.id,
-              name: `${data.data.first_name || ''} ${data.data.last_name || ''}`.trim() || 'Unknown User',
-              email: data.data.email_addresses[0]?.email_address || '',
-              phone: data.data.phone_numbers[0]?.phone_number || '',
-              company: '',
-              priority: 'normal',
-              usingPlatform: true,
-              assignedTo: 'Auto-assigned',
-              referredBy: '',
-              lastContact: new Date().toISOString().split('T')[0],
-              notes: 'New signup via Clerk',
-              commissionApproved: false,
-              createdAt: new Date(data.data.created_at).toISOString()
-            };
-            
-            setUsers(prevUsers => [newUser, ...prevUsers]);
-            toast({
-              title: "🔔 New Signup Received!",
-              description: `${newUser.name} (${newUser.email}) has been automatically added`,
-            });
-          }
-        };
-        
-        return () => eventSource.close();
-      } catch (error) {
-        console.log('Webhook listener setup - will use simulation for demo');
-      }
-    };
-    
-    handleClerkWebhook();
+    const intervalId = setInterval(loadUsers, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
   }, [toast]);
 
   const [affiliates, setAffiliates] = useState<Affiliate[]>([
