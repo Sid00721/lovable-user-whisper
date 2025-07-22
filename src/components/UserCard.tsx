@@ -2,7 +2,7 @@ import { User } from "@/types/crm";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Mail, Phone, MessageSquare } from "lucide-react";
+import { Edit, Mail, Phone, MessageSquare, ExternalLink } from "lucide-react";
 
 interface UserCardProps {
   user: User;
@@ -27,6 +27,9 @@ export function UserCard({ user, onEdit }: UserCardProps) {
         <div>
           <h3 className="text-lg font-semibold text-foreground">{user.name}</h3>
           <p className="text-muted-foreground">{user.email}</p>
+          {user.phone && (
+            <p className="text-sm text-muted-foreground">{user.phone}</p>
+          )}
           {user.company && (
             <p className="text-sm text-muted-foreground">{user.company}</p>
           )}
@@ -64,7 +67,7 @@ export function UserCard({ user, onEdit }: UserCardProps) {
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <Button
           variant="outline"
           size="sm"
@@ -76,18 +79,47 @@ export function UserCard({ user, onEdit }: UserCardProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => window.open(`mailto:${user.email}`)}
+          onClick={() => window.open(`mailto:${user.email}`, '_blank')}
         >
           <Mail className="h-4 w-4 mr-1" />
           Email
         </Button>
+        {user.phone && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`tel:${user.phone}`, '_blank')}
+          >
+            <Phone className="h-4 w-4 mr-1" />
+            Call
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"
-          onClick={() => window.open(`https://wa.me/?text=Hi ${user.name}`)}
+          onClick={() => {
+            const phone = user.phone ? user.phone.replace(/[^0-9+]/g, '') : '';
+            const message = encodeURIComponent(`Hi ${user.name}, this is from Voqo team. We noticed you signed up for our platform. How can we help you get started?`);
+            const whatsappUrl = phone 
+              ? `https://wa.me/${phone}?text=${message}`
+              : `https://wa.me/?text=${message}`;
+            window.open(whatsappUrl, '_blank');
+          }}
         >
           <MessageSquare className="h-4 w-4 mr-1" />
           WhatsApp
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const domain = user.email.split('@')[1];
+            const linkedinUrl = `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(user.name + ' ' + (user.company || domain))}`;
+            window.open(linkedinUrl, '_blank');
+          }}
+        >
+          <ExternalLink className="h-4 w-4 mr-1" />
+          LinkedIn
         </Button>
       </div>
     </Card>

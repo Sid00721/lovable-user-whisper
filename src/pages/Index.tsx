@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { User, Affiliate } from "@/types/crm";
+import { useState, useEffect } from "react";
+import { User, Affiliate, SignupNotification } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
 import { AffiliateTracker } from "@/components/AffiliateTracker";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Users, TrendingUp, Clock } from "lucide-react";
+import { Plus, Search, Users, TrendingUp, Clock, Webhook, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -20,6 +20,7 @@ const Index = () => {
       id: "1",
       name: "John Smith",
       email: "john@realestate.com",
+      phone: "+1234567890",
       company: "Smith Realty",
       priority: "high",
       usingPlatform: true,
@@ -34,6 +35,7 @@ const Index = () => {
       id: "2",
       name: "Lisa Chen",
       email: "lisa@gmail.com",
+      phone: "+1987654321",
       company: "",
       priority: "normal",
       usingPlatform: false,
@@ -44,6 +46,49 @@ const Index = () => {
       createdAt: "2024-01-08"
     }
   ]);
+
+  // Set up webhook listener for Clerk signups
+  useEffect(() => {
+    const handleClerkWebhook = async () => {
+      try {
+        // Listen for webhook notifications from Clerk
+        const eventSource = new EventSource('/api/clerk-webhooks');
+        
+        eventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === 'user.created') {
+            const newUser: User = {
+              id: data.data.id,
+              name: `${data.data.first_name || ''} ${data.data.last_name || ''}`.trim() || 'Unknown User',
+              email: data.data.email_addresses[0]?.email_address || '',
+              phone: data.data.phone_numbers[0]?.phone_number || '',
+              company: '',
+              priority: 'normal',
+              usingPlatform: true,
+              assignedTo: 'Auto-assigned',
+              referredBy: '',
+              lastContact: new Date().toISOString().split('T')[0],
+              notes: 'New signup via Clerk',
+              commissionApproved: false,
+              createdAt: new Date(data.data.created_at).toISOString()
+            };
+            
+            setUsers(prevUsers => [newUser, ...prevUsers]);
+            toast({
+              title: "🔔 New Signup Received!",
+              description: `${newUser.name} (${newUser.email}) has been automatically added`,
+            });
+          }
+        };
+        
+        return () => eventSource.close();
+      } catch (error) {
+        console.log('Webhook listener setup - will use simulation for demo');
+      }
+    };
+    
+    handleClerkWebhook();
+  }, [toast]);
 
   const [affiliates, setAffiliates] = useState<Affiliate[]>([
     {
@@ -79,6 +124,7 @@ const Index = () => {
       id: Date.now().toString(),
       name: userData.name || '',
       email: userData.email || '',
+      phone: userData.phone || '',
       company: userData.company || '',
       priority: userData.priority || 'normal',
       usingPlatform: userData.usingPlatform || false,
@@ -94,6 +140,57 @@ const Index = () => {
     toast({
       title: "User added successfully",
       description: `${newUser.name} has been added to your CRM`,
+    });
+  };
+
+  // Simulate Clerk webhook for testing
+  const simulateClerkSignup = () => {
+    const sampleSignups: SignupNotification[] = [
+      {
+        name: "Emma Rodriguez",
+        email: "emma@luxuryrealty.com",
+        phone: "+1555123456",
+        company: "Luxury Realty Group",
+        timestamp: new Date().toISOString()
+      },
+      {
+        name: "David Kim",
+        email: "david@techstartup.io",
+        phone: "+1555987654",
+        timestamp: new Date().toISOString()
+      },
+      {
+        name: "Sarah Johnson",
+        email: "sarah@propertyexperts.com",
+        phone: "+1555456789",
+        company: "Property Experts LLC",
+        timestamp: new Date().toISOString()
+      }
+    ];
+    
+    const randomSignup = sampleSignups[Math.floor(Math.random() * sampleSignups.length)];
+    
+    // Simulate what would happen when Clerk sends a webhook
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: randomSignup.name,
+      email: randomSignup.email,
+      phone: randomSignup.phone || '',
+      company: randomSignup.company || '',
+      priority: 'normal',
+      usingPlatform: true,
+      assignedTo: 'Auto-assigned',
+      referredBy: '',
+      lastContact: new Date().toISOString().split('T')[0],
+      notes: 'New signup via Clerk webhook',
+      commissionApproved: false,
+      createdAt: randomSignup.timestamp
+    };
+    
+    setUsers(prevUsers => [newUser, ...prevUsers]);
+    toast({
+      title: "🔔 New Clerk Signup!",
+      description: `${newUser.name} (${newUser.email}) signed up and was automatically added`,
     });
   };
 
@@ -152,13 +249,19 @@ const Index = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Internal CRM</h1>
-            <p className="text-muted-foreground">Manage your early users and track affiliates</p>
+            <h1 className="text-3xl font-bold text-foreground">Voqo Internal CRM</h1>
+            <p className="text-muted-foreground">Manage users from Clerk signups and track affiliates</p>
           </div>
-          <Button onClick={openAddForm}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={simulateClerkSignup}>
+              <Bell className="h-4 w-4 mr-2" />
+              Simulate Clerk Signup
+            </Button>
+            <Button onClick={openAddForm}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add User
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
