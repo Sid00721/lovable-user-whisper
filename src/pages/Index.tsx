@@ -25,8 +25,8 @@ const Index = () => {
       try {
         const response = await fetch('http://localhost:3001/api/users');
         if (response.ok) {
-          const usersData = await response.json();
-          setUsers(usersData);
+          const data = await response.json();
+          setUsers(data.users);
         } else {
           console.error('Failed to load users');
           toast({
