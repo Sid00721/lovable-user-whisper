@@ -17,6 +17,7 @@ export type Database = {
       clients: {
         Row: {
           clerk_id: string
+          commission_approved: boolean | null
           company: string | null
           created_at: string | null
           email: string
@@ -25,12 +26,14 @@ export type Database = {
           is_using_platform: boolean | null
           last_contact: string | null
           name: string
+          notes: string | null
           phone: string | null
           priority: string | null
           referred_by: string | null
         }
         Insert: {
           clerk_id: string
+          commission_approved?: boolean | null
           company?: string | null
           created_at?: string | null
           email: string
@@ -39,12 +42,14 @@ export type Database = {
           is_using_platform?: boolean | null
           last_contact?: string | null
           name: string
+          notes?: string | null
           phone?: string | null
           priority?: string | null
           referred_by?: string | null
         }
         Update: {
           clerk_id?: string
+          commission_approved?: boolean | null
           company?: string | null
           created_at?: string | null
           email?: string
@@ -53,6 +58,7 @@ export type Database = {
           is_using_platform?: boolean | null
           last_contact?: string | null
           name?: string
+          notes?: string | null
           phone?: string | null
           priority?: string | null
           referred_by?: string | null
