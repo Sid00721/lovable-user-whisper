@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Employee } from "@/types/crm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,40 @@ export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFo
     notes: user?.notes || '',
     commissionApproved: user?.commissionApproved || false,
   });
+
+  // Update form data when user prop changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        company: user.company || '',
+        priority: user.priority || 'normal',
+        usingPlatform: user.usingPlatform || false,
+        assignedTo: user.assignedTo || '',
+        referredBy: user.referredBy || '',
+        lastContact: user.lastContact || '',
+        notes: user.notes || '',
+        commissionApproved: user.commissionApproved || false,
+      });
+    } else {
+      // Reset form for new user
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        priority: 'normal',
+        usingPlatform: false,
+        assignedTo: '',
+        referredBy: '',
+        lastContact: '',
+        notes: '',
+        commissionApproved: false,
+      });
+    }
+  }, [user]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
