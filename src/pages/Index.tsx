@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { User, Affiliate, SignupNotification } from "@/types/crm";
+import { useState } from "react";
+import { User, Affiliate } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
 import { AffiliateTracker } from "@/components/AffiliateTracker";
@@ -8,51 +8,42 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Users, TrendingUp, Clock, Webhook, Bell } from "lucide-react";
+import { Plus, Search, Users, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const { toast } = useToast();
   
-  // Users data loaded from backend API
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Load initial data from backend and poll for updates
-  useEffect(() => {
-    const loadUsers = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch('http://localhost:3001/api/users');
-        if (response.ok) {
-          const data = await response.json();
-          setUsers(data.users);
-        } else {
-          console.error('Failed to load users');
-          toast({
-            title: "Error",
-            description: "Could not fetch users.",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error loading users:', error);
-        toast({
-          title: "Error",
-          description: "Could not connect to the server.",
-          variant: "destructive",
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUsers(); // Initial load
-
-    const intervalId = setInterval(loadUsers, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(intervalId); // Cleanup on unmount
-  }, [toast]);
+  // Sample data - in a real app, this would come from a database
+  const [users, setUsers] = useState<User[]>([
+    {
+      id: "1",
+      name: "John Smith",
+      email: "john@realestate.com",
+      company: "Smith Realty",
+      priority: "high",
+      usingPlatform: true,
+      assignedTo: "Sarah",
+      referredBy: "Mike Johnson",
+      lastContact: "2024-01-15",
+      notes: "WhatsApped Jan 15, very interested in AI agents",
+      commissionApproved: false,
+      createdAt: "2024-01-10"
+    },
+    {
+      id: "2",
+      name: "Lisa Chen",
+      email: "lisa@gmail.com",
+      company: "",
+      priority: "normal",
+      usingPlatform: false,
+      assignedTo: "Alex",
+      lastContact: "2024-01-12",
+      notes: "Called Jan 12, still evaluating options",
+      commissionApproved: false,
+      createdAt: "2024-01-08"
+    }
+  ]);
 
   const [affiliates, setAffiliates] = useState<Affiliate[]>([
     {
@@ -83,143 +74,42 @@ const Index = () => {
     return matchesSearch && matchesPriority && matchesAssigned;
   });
 
-  const handleAddUser = async (userData: Partial<User>) => {
-    try {
-      const response = await fetch('http://localhost:3001/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      if (response.ok) {
-        const newUser = await response.json();
-        setUsers([newUser, ...users]);
-        toast({
-          title: "User added successfully",
-          description: `${newUser.name} has been added to your CRM`,
-        });
-      } else {
-        throw new Error('Failed to add user');
-      }
-    } catch (error) {
-      console.error('Error adding user:', error);
-      toast({
-        title: "Error adding user",
-        description: "Failed to save user to database. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleAddUser = (userData: Partial<User>) => {
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: userData.name || '',
+      email: userData.email || '',
+      company: userData.company || '',
+      priority: userData.priority || 'normal',
+      usingPlatform: userData.usingPlatform || false,
+      assignedTo: userData.assignedTo || '',
+      referredBy: userData.referredBy || '',
+      lastContact: userData.lastContact || '',
+      notes: userData.notes || '',
+      commissionApproved: userData.commissionApproved || false,
+      createdAt: new Date().toISOString()
+    };
+    
+    setUsers([...users, newUser]);
+    toast({
+      title: "User added successfully",
+      description: `${newUser.name} has been added to your CRM`,
+    });
   };
 
-  // Simulate Clerk webhook for testing
-  const simulateClerkSignup = async () => {
-    const sampleSignups: SignupNotification[] = [
-      {
-        name: "Emma Rodriguez",
-        email: "emma@luxuryrealty.com",
-        phone: "+1555123456",
-        company: "Luxury Realty Group",
-        timestamp: new Date().toISOString()
-      },
-      {
-        name: "David Kim",
-        email: "david@techstartup.io",
-        phone: "+1555987654",
-        timestamp: new Date().toISOString()
-      },
-      {
-        name: "Sarah Johnson",
-        email: "sarah@propertyexperts.com",
-        phone: "+1555456789",
-        company: "Property Experts LLC",
-        timestamp: new Date().toISOString()
-      }
-    ];
-    
-    const randomSignup = sampleSignups[Math.floor(Math.random() * sampleSignups.length)];
-    
-    try {
-      // Create user data for API call
-      const userData = {
-        name: randomSignup.name,
-        email: randomSignup.email,
-        phone: randomSignup.phone || '',
-        company: randomSignup.company || '',
-        priority: 'normal',
-        usingPlatform: true,
-        assignedTo: 'Auto-assigned',
-        referredBy: '',
-        lastContact: new Date().toISOString().split('T')[0],
-        notes: 'New signup via Clerk webhook simulation',
-        commissionApproved: false
-      };
-      
-      // Call the API to add the user
-      const response = await fetch('http://localhost:3001/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      if (response.ok) {
-        const newUser = await response.json();
-        setUsers(prevUsers => [newUser, ...prevUsers]);
-        toast({
-          title: "🔔 New Clerk Signup!",
-          description: `${newUser.name} (${newUser.email}) signed up and was automatically added`,
-        });
-      } else {
-        throw new Error('Failed to simulate signup');
-      }
-    } catch (error) {
-      console.error('Error simulating signup:', error);
-      toast({
-        title: "Error simulating signup",
-        description: "Failed to add simulated user. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditUser = async (userData: Partial<User>) => {
+  const handleEditUser = (userData: Partial<User>) => {
     if (!editingUser) return;
     
-    try {
-      const response = await fetch(`http://localhost:3001/api/users/${editingUser.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-      
-      if (response.ok) {
-        const updatedUser = await response.json();
-        const updatedUsers = users.map(user =>
-          user.id === editingUser.id ? updatedUser : user
-        );
-        
-        setUsers(updatedUsers);
-        setEditingUser(undefined);
-        toast({
-          title: "User updated successfully",
-          description: `${updatedUser.name} has been updated`,
-        });
-      } else {
-        throw new Error('Failed to update user');
-      }
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast({
-        title: "Error updating user",
-        description: "Failed to save changes to database. Please try again.",
-        variant: "destructive",
-      });
-    }
+    const updatedUsers = users.map(user =>
+      user.id === editingUser.id ? { ...user, ...userData } : user
+    );
+    
+    setUsers(updatedUsers);
+    setEditingUser(undefined);
+    toast({
+      title: "User updated successfully",
+      description: `${userData.name} has been updated`,
+    });
   };
 
   const handleMarkPaid = (affiliateId: string) => {
@@ -262,19 +152,13 @@ const Index = () => {
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Voqo Internal CRM</h1>
-            <p className="text-muted-foreground">Manage users from Clerk signups and track affiliates</p>
+            <h1 className="text-3xl font-bold text-foreground">Internal CRM</h1>
+            <p className="text-muted-foreground">Manage your early users and track affiliates</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={simulateClerkSignup}>
-              <Bell className="h-4 w-4 mr-2" />
-              Simulate Clerk Signup
-            </Button>
-            <Button onClick={openAddForm}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
-          </div>
+          <Button onClick={openAddForm}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add User
+          </Button>
         </div>
 
         {/* Stats Cards */}
@@ -369,32 +253,22 @@ const Index = () => {
         </Card>
 
         {/* Users Grid */}
-        {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {filteredUsers.map((user) => (
+            <UserCard
+              key={user.id}
+              user={user}
+              onEdit={openEditForm}
+            />
+          ))}
+        </div>
+
+        {filteredUsers.length === 0 && (
           <Card>
             <CardContent className="text-center py-12">
-              <p className="text-muted-foreground">Loading users...</p>
+              <p className="text-muted-foreground">No users found matching your criteria</p>
             </CardContent>
           </Card>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredUsers.map((user) => (
-                <UserCard
-                  key={user.id}
-                  user={user}
-                  onEdit={openEditForm}
-                />
-              ))}
-            </div>
-
-            {filteredUsers.length === 0 && (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <p className="text-muted-foreground">No users found matching your criteria</p>
-                </CardContent>
-              </Card>
-            )}
-          </>
         )}
 
         {/* User Form Dialog */}

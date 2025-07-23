@@ -19,7 +19,6 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
   const [formData, setFormData] = useState<Partial<User>>({
     name: user?.name || '',
     email: user?.email || '',
-    phone: user?.phone || '',
     company: user?.company || '',
     priority: user?.priority || 'normal',
     usingPlatform: user?.usingPlatform || false,
@@ -70,16 +69,6 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+1234567890"
-              />
-            </div>
-            <div>
               <Label htmlFor="company">Company</Label>
               <Input
                 id="company"
@@ -87,9 +76,6 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
               />
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Priority</Label>
               <Select
@@ -105,6 +91,9 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="assignedTo">Assigned To</Label>
               <Input
@@ -113,15 +102,14 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
                 onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
               />
             </div>
-          </div>
-
-          <div>
-            <Label htmlFor="referredBy">Referred By</Label>
-            <Input
-              id="referredBy"
-              value={formData.referredBy}
-              onChange={(e) => setFormData({ ...formData, referredBy: e.target.value })}
-            />
+            <div>
+              <Label htmlFor="referredBy">Referred By</Label>
+              <Input
+                id="referredBy"
+                value={formData.referredBy}
+                onChange={(e) => setFormData({ ...formData, referredBy: e.target.value })}
+              />
+            </div>
           </div>
 
           <div>

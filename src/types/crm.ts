@@ -2,7 +2,6 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  phone?: string;
   company?: string;
   priority: 'high' | 'normal';
   usingPlatform: boolean;
@@ -12,14 +11,6 @@ export interface User {
   notes: string;
   commissionApproved: boolean;
   createdAt: string;
-}
-
-export interface SignupNotification {
-  name: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  timestamp: string;
 }
 
 export interface Affiliate {
