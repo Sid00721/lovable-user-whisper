@@ -20,6 +20,7 @@ export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFo
   const [formData, setFormData] = useState<Partial<User>>({
     name: user?.name || '',
     email: user?.email || '',
+    phone: user?.phone || '',
     company: user?.company || '',
     priority: user?.priority || 'normal',
     usingPlatform: user?.usingPlatform || false,
@@ -70,6 +71,15 @@ export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFo
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+            <div>
               <Label htmlFor="company">Company</Label>
               <Input
                 id="company"
@@ -77,21 +87,22 @@ export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFo
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
               />
             </div>
-            <div>
-              <Label>Priority</Label>
-              <Select
-                value={formData.priority}
-                onValueChange={(value: 'high' | 'normal') => setFormData({ ...formData, priority: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="high">🔥 High Priority</SelectItem>
-                  <SelectItem value="normal">⭐ Normal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+
+          <div>
+            <Label>Priority</Label>
+            <Select
+              value={formData.priority}
+              onValueChange={(value: 'high' | 'normal') => setFormData({ ...formData, priority: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="high">🔥 High Priority</SelectItem>
+                <SelectItem value="normal">⭐ Normal</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
