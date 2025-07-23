@@ -27,22 +27,15 @@ serve(async (request) => {
     return false;
   }
   try {
-    // Parse signature header
-    const signatureParts = signature.split(' ');
-    console.log('Parsed signature parts:', signatureParts);
-    let timestamp = '';
+    // Parse Clerk's svix-signature header (format: v1,<signature>)
     let signatures = [];
-    for (const part of signatureParts){
-      const [key, value] = part.split('=');
-      if (key === 't') {
-        timestamp = value;
-      } else if (key.startsWith('v1')) {
-        signatures.push(value);
-      }
+    let timestamp = '';
+    if (signature.startsWith('v1,')) {
+      signatures = [signature.split('v1,')[1]];
     }
-    console.log('Extracted timestamp:', timestamp);
     console.log('Extracted signatures:', signatures);
-    if (!timestamp || signatures.length === 0) {
+    // Clerk does not send a timestamp, so skip timestamp check
+    if (signatures.length === 0 || !signatures[0]) {
       console.error('Invalid signature format');
       return false;
     }
