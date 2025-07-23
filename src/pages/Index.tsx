@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Affiliate, Employee } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
@@ -11,9 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Users, TrendingUp, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = "https://tbplhgbtnksyqnuqfncr.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRicGxoZ2J0bmtzeXFudXFmbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMyMDYsImV4cCI6MjA2ODgwOTIwNn0.0whaVn_vkDUBF9xM_AYPFZBCnv31HiqJe9WikjBm4Hk";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 const Index = () => {
   const { toast } = useToast();
-  
+
   // Team members - your 4 employees
   const employees: Employee[] = [
     { id: "1", name: "Sarah Johnson", email: "sarah@company.com", role: "Account Manager" },
@@ -21,37 +27,49 @@ const Index = () => {
     { id: "3", name: "Maria Garcia", email: "maria@company.com", role: "Customer Success" },
     { id: "4", name: "David Chen", email: "david@company.com", role: "Account Manager" }
   ];
-  
-  // Sample data - in a real app, this would come from a database
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      name: "John Smith",
-      email: "john@realestate.com",
-      company: "Smith Realty",
-      priority: "high",
-      usingPlatform: true,
-      assignedTo: "Sarah Johnson",
-      referredBy: "Mike Johnson",
-      lastContact: "2024-01-15",
-      notes: "WhatsApped Jan 15, very interested in AI agents",
-      commissionApproved: false,
-      createdAt: "2024-01-10"
-    },
-    {
-      id: "2",
-      name: "Lisa Chen",
-      email: "lisa@gmail.com",
-      company: "",
-      priority: "normal",
-      usingPlatform: false,
-      assignedTo: "Alex Thompson",
-      lastContact: "2024-01-12",
-      notes: "Called Jan 12, still evaluating options",
-      commissionApproved: false,
-      createdAt: "2024-01-08"
-    }
-  ]);
+
+  const [users, setUsers] = useState<User[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      const { data, error } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching users:', error);
+      } else if (data) {
+        // Map Supabase data to User type if needed
+        type ClientRow = {
+          id: string | number;
+          name: string;
+          email: string;
+          company?: string;
+          priority?: string;
+          is_using_platform?: boolean;
+          employee_id?: string;
+          referred_by?: string;
+          last_contact?: string;
+          notes?: string;
+          commission_approved?: boolean;
+          created_at?: string;
+        };
+
+        setUsers((data as ClientRow[]).map((u) => ({
+          id: u.id?.toString() ?? '',
+          name: u.name ?? '',
+          email: u.email ?? '',
+          company: u.company ?? '',
+          priority: u.priority === 'high' ? 'high' : 'normal',
+          usingPlatform: u.is_using_platform ?? false,
+          assignedTo: u.employee_id ?? '',
+          referredBy: u.referred_by ?? '',
+          lastContact: u.last_contact ?? '',
+          notes: u.notes ?? '',
+          commissionApproved: u.commission_approved ?? false,
+          createdAt: u.created_at ?? ''
+        })));
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const [affiliates, setAffiliates] = useState<Affiliate[]>([
     {
