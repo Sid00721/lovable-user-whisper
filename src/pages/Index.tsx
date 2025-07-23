@@ -3,6 +3,7 @@ import { User, Affiliate, Employee } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
 import { AffiliateTracker } from "@/components/AffiliateTracker";
+import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,7 +18,11 @@ const supabaseUrl = "https://tbplhgbtnksyqnuqfncr.supabase.co";
 const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRicGxoZ2J0bmtzeXFudXFmbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMyMDYsImV4cCI6MjA2ODgwOTIwNn0.0whaVn_vkDUBF9xM_AYPFZBCnv31HiqJe9WikjBm4Hk";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-const Index = () => {
+interface IndexProps {
+  onLogout: () => void;
+}
+
+const Index = ({ onLogout }: IndexProps) => {
   const { toast } = useToast();
 
   // Team members - your 4 employees
@@ -258,11 +263,10 @@ const Index = () => {
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Internal CRM</h1>
-            <p className="text-muted-foreground">Manage your early users and track affiliates</p>
-          </div>
+        <Header onLogout={onLogout} />
+        
+        {/* Add User Button */}
+        <div className="flex justify-end">
           <Button onClick={openAddForm}>
             <Plus className="h-4 w-4 mr-2" />
             Add User
