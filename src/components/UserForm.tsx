@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User } from "@/types/crm";
+import { User, Employee } from "@/types/crm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,9 +13,10 @@ interface UserFormProps {
   onOpenChange: (open: boolean) => void;
   user?: User;
   onSave: (user: Partial<User>) => void;
+  employees: Employee[];
 }
 
-export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
+export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFormProps) {
   const [formData, setFormData] = useState<Partial<User>>({
     name: user?.name || '',
     email: user?.email || '',
@@ -95,12 +96,22 @@ export function UserForm({ open, onOpenChange, user, onSave }: UserFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="assignedTo">Assigned To</Label>
-              <Input
-                id="assignedTo"
+              <Label>Assigned To</Label>
+              <Select
                 value={formData.assignedTo}
-                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-              />
+                onValueChange={(value: string) => setFormData({ ...formData, assignedTo: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team member" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map(employee => (
+                    <SelectItem key={employee.id} value={employee.name}>
+                      {employee.name} - {employee.role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="referredBy">Referred By</Label>

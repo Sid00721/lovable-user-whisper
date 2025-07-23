@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { User, Affiliate } from "@/types/crm";
+import { User, Affiliate, Employee } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
 import { AffiliateTracker } from "@/components/AffiliateTracker";
@@ -14,6 +14,14 @@ import { useToast } from "@/hooks/use-toast";
 const Index = () => {
   const { toast } = useToast();
   
+  // Team members - your 4 employees
+  const employees: Employee[] = [
+    { id: "1", name: "Sarah Johnson", email: "sarah@company.com", role: "Account Manager" },
+    { id: "2", name: "Alex Thompson", email: "alex@company.com", role: "Sales Rep" },
+    { id: "3", name: "Maria Garcia", email: "maria@company.com", role: "Customer Success" },
+    { id: "4", name: "David Chen", email: "david@company.com", role: "Account Manager" }
+  ];
+  
   // Sample data - in a real app, this would come from a database
   const [users, setUsers] = useState<User[]>([
     {
@@ -23,7 +31,7 @@ const Index = () => {
       company: "Smith Realty",
       priority: "high",
       usingPlatform: true,
-      assignedTo: "Sarah",
+      assignedTo: "Sarah Johnson",
       referredBy: "Mike Johnson",
       lastContact: "2024-01-15",
       notes: "WhatsApped Jan 15, very interested in AI agents",
@@ -37,7 +45,7 @@ const Index = () => {
       company: "",
       priority: "normal",
       usingPlatform: false,
-      assignedTo: "Alex",
+      assignedTo: "Alex Thompson",
       lastContact: "2024-01-12",
       notes: "Called Jan 12, still evaluating options",
       commissionApproved: false,
@@ -238,13 +246,15 @@ const Index = () => {
               </Select>
 
               <Select value={assignedFilter} onValueChange={setAssignedFilter}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Filter by assignee" />
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Filter by team member" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Assignees</SelectItem>
-                  {assignees.map(assignee => (
-                    <SelectItem key={assignee} value={assignee}>{assignee}</SelectItem>
+                  <SelectItem value="all">All Team Members</SelectItem>
+                  {employees.map(employee => (
+                    <SelectItem key={employee.id} value={employee.name}>
+                      {employee.name} - {employee.role}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -277,6 +287,7 @@ const Index = () => {
           onOpenChange={setShowUserForm}
           user={editingUser}
           onSave={editingUser ? handleEditUser : handleAddUser}
+          employees={employees}
         />
       </div>
     </div>
