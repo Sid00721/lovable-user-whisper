@@ -56,6 +56,7 @@ serve(async (request) => {
     const firstName = userData.first_name || '';
     const lastName = userData.last_name || '';
     const name = `${firstName} ${lastName}`.trim() || email?.split('@')[0] || 'Unknown';
+    const phone = userData.phone_numbers?.[0]?.phone_number;
     if (!email || !clerkId) {
       console.error('Missing required user data:', { email, clerkId });
       return new Response('Invalid user data', { status: 400, headers: corsHeaders });
@@ -70,6 +71,7 @@ serve(async (request) => {
         clerk_id: clerkId,
         name: name,
         email: email,
+        phone: phone,
         created_at: new Date().toISOString()
       })
       .select()
