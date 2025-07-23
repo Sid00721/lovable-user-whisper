@@ -152,7 +152,7 @@ export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFo
                 <SelectContent>
                   {employees.map(employee => (
                     <SelectItem key={employee.id} value={employee.name}>
-                      {employee.name} - {employee.role}
+                      {employee.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

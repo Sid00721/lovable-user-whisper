@@ -27,10 +27,10 @@ const Index = ({ onLogout }: IndexProps) => {
 
   // Team members - your 4 employees
   const employees: Employee[] = [
-    { id: "1", name: "Andre", email: "andre@company.com", role: "Account Manager" },
-    { id: "2", name: "Amith", email: "amith@company.com", role: "Sales Rep" },
-    { id: "3", name: "Adam", email: "adam@company.com", role: "Customer Success" },
-    { id: "4", name: "Sid", email: "sid@company.com", role: "Account Manager" }
+    { id: "1", name: "Andre", email: "andre@voqo.ai", role: "" },
+    { id: "2", name: "Amith", email: "amith@voqo.ai", role: "" },
+    { id: "3", name: "Adam", email: "adam@voqo.ai", role: "" },
+    { id: "4", name: "Sid", email: "sid@voqo.ai", role: "" }
   ];
 
   const [users, setUsers] = useState<User[]>([]);
@@ -357,7 +357,7 @@ const Index = ({ onLogout }: IndexProps) => {
                   <SelectItem value="all">All Team Members</SelectItem>
                   {employees.map(employee => (
                     <SelectItem key={employee.id} value={employee.name}>
-                      {employee.name} - {employee.role}
+                      {employee.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
