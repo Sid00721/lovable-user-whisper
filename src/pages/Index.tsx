@@ -41,6 +41,7 @@ const Index = () => {
           id: string | number;
           name: string;
           email: string;
+          phone?: string;
           company?: string;
           priority?: string;
           is_using_platform?: boolean;
@@ -56,6 +57,7 @@ const Index = () => {
           id: u.id?.toString() ?? '',
           name: u.name ?? '',
           email: u.email ?? '',
+          phone: u.phone ?? '',
           company: u.company ?? '',
           priority: u.priority === 'high' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
@@ -100,42 +102,122 @@ const Index = () => {
     return matchesSearch && matchesPriority && matchesAssigned;
   });
 
-  const handleAddUser = (userData: Partial<User>) => {
-    const newUser: User = {
-      id: Date.now().toString(),
-      name: userData.name || '',
-      email: userData.email || '',
-      company: userData.company || '',
-      priority: userData.priority || 'normal',
-      usingPlatform: userData.usingPlatform || false,
-      assignedTo: userData.assignedTo || '',
-      referredBy: userData.referredBy || '',
-      lastContact: userData.lastContact || '',
-      notes: userData.notes || '',
-      commissionApproved: userData.commissionApproved || false,
-      createdAt: new Date().toISOString()
-    };
-    
-    setUsers([...users, newUser]);
-    toast({
-      title: "User added successfully",
-      description: `${newUser.name} has been added to your CRM`,
-    });
+  const handleAddUser = async (userData: Partial<User>) => {
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .insert([{
+          name: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          company: userData.company || '',
+          priority: userData.priority || 'normal',
+          is_using_platform: userData.usingPlatform || false,
+          employee_id: userData.assignedTo || '',
+          referred_by: userData.referredBy || '',
+          last_contact: userData.lastContact || null,
+          notes: userData.notes || '',
+          commission_approved: userData.commissionApproved || false
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Refresh the users list
+      const { data: allUsers, error: fetchError } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      
+      if (allUsers) {
+        setUsers((allUsers as any[]).map((u) => ({
+          id: u.id?.toString() ?? '',
+          name: u.name ?? '',
+          email: u.email ?? '',
+          phone: u.phone ?? '',
+          company: u.company ?? '',
+          priority: u.priority === 'high' ? 'high' : 'normal',
+          usingPlatform: u.is_using_platform ?? false,
+          assignedTo: u.employee_id ?? '',
+          referredBy: u.referred_by ?? '',
+          lastContact: u.last_contact ?? '',
+          notes: u.notes ?? '',
+          commissionApproved: u.commission_approved ?? false,
+          createdAt: u.created_at ?? ''
+        })));
+      }
+
+      toast({
+        title: "User added successfully",
+        description: `${userData.name} has been added to your CRM`,
+      });
+    } catch (error) {
+      console.error('Error adding user:', error);
+      toast({
+        title: "Error adding user",
+        description: "Please try again",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleEditUser = (userData: Partial<User>) => {
+  const handleEditUser = async (userData: Partial<User>) => {
     if (!editingUser) return;
     
-    const updatedUsers = users.map(user =>
-      user.id === editingUser.id ? { ...user, ...userData } : user
-    );
-    
-    setUsers(updatedUsers);
-    setEditingUser(undefined);
-    toast({
-      title: "User updated successfully",
-      description: `${userData.name} has been updated`,
-    });
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          name: userData.name || '',
+          email: userData.email || '',
+          phone: userData.phone || '',
+          company: userData.company || '',
+          priority: userData.priority || 'normal',
+          is_using_platform: userData.usingPlatform || false,
+          employee_id: userData.assignedTo || '',
+          referred_by: userData.referredBy || '',
+          last_contact: userData.lastContact || null,
+          notes: userData.notes || '',
+          commission_approved: userData.commissionApproved || false
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      // Refresh the users list
+      const { data: allUsers, error: fetchError } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      
+      if (allUsers) {
+        setUsers((allUsers as any[]).map((u) => ({
+          id: u.id?.toString() ?? '',
+          name: u.name ?? '',
+          email: u.email ?? '',
+          phone: u.phone ?? '',
+          company: u.company ?? '',
+          priority: u.priority === 'high' ? 'high' : 'normal',
+          usingPlatform: u.is_using_platform ?? false,
+          assignedTo: u.employee_id ?? '',
+          referredBy: u.referred_by ?? '',
+          lastContact: u.last_contact ?? '',
+          notes: u.notes ?? '',
+          commissionApproved: u.commission_approved ?? false,
+          createdAt: u.created_at ?? ''
+        })));
+      }
+
+      setEditingUser(undefined);
+      toast({
+        title: "User updated successfully",
+        description: `${userData.name} has been updated`,
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: "Error updating user",
+        description: "Please try again",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleMarkPaid = (affiliateId: string) => {
