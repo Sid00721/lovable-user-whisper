@@ -27,10 +27,10 @@ const Index = ({ onLogout }: IndexProps) => {
 
   // Team members - your 4 employees
   const employees: Employee[] = [
-    { id: "1", name: "Andre", email: "andre@voqo.ai", role: "" },
-    { id: "2", name: "Amith", email: "amith@voqo.ai", role: "" },
-    { id: "3", name: "Adam", email: "adam@voqo.ai", role: "" },
-    { id: "4", name: "Sid", email: "sid@voqo.ai", role: "" }
+    { id: "550e8400-e29b-41d4-a716-446655440001", name: "Andre", email: "andre@voqo.ai", role: "" },
+    { id: "550e8400-e29b-41d4-a716-446655440002", name: "Amith", email: "amith@voqo.ai", role: "" },
+    { id: "550e8400-e29b-41d4-a716-446655440003", name: "Adam", email: "adam@voqo.ai", role: "" },
+    { id: "550e8400-e29b-41d4-a716-446655440004", name: "Sid", email: "sid@voqo.ai", role: "" }
   ];
 
   const [users, setUsers] = useState<User[]>([]);
