@@ -144,7 +144,7 @@ export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFo
               <Label>Assigned To</Label>
               <Select
                 value={formData.assignedTo}
-                onValueChange={(value: string) => setFormData({ ...formData, assignedTo: value })}
+                onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select team member" />

@@ -64,9 +64,9 @@ const Index = ({ onLogout }: IndexProps) => {
           email: u.email ?? '',
           phone: u.phone ?? '',
           company: u.company ?? '',
-          priority: u.priority === 'high' ? 'high' : 'normal',
+          priority: u.priority === 'High' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
-          assignedTo: u.employee_id ?? '',
+          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? '',
           referredBy: u.referred_by ?? '',
           lastContact: u.last_contact ?? '',
           notes: u.notes ?? '',
@@ -109,6 +109,10 @@ const Index = ({ onLogout }: IndexProps) => {
 
   const handleAddUser = async (userData: Partial<User>) => {
     try {
+      // Find the employee ID based on the name
+      const selectedEmployee = employees.find(emp => emp.name === userData.assignedTo);
+      const employeeId = selectedEmployee ? selectedEmployee.id : null;
+
       const { data, error } = await supabase
         .from('clients')
         .insert([{
@@ -118,7 +122,7 @@ const Index = ({ onLogout }: IndexProps) => {
           company: userData.company || '',
           priority: userData.priority || 'normal',
           is_using_platform: userData.usingPlatform || false,
-          employee_id: userData.assignedTo || '',
+          employee_id: employeeId,
           referred_by: userData.referredBy || '',
           last_contact: userData.lastContact || null,
           notes: userData.notes || '',
@@ -140,9 +144,9 @@ const Index = ({ onLogout }: IndexProps) => {
           email: u.email ?? '',
           phone: u.phone ?? '',
           company: u.company ?? '',
-          priority: u.priority === 'high' ? 'high' : 'normal',
+          priority: u.priority === 'High' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
-          assignedTo: u.employee_id ?? '',
+          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? '',
           referredBy: u.referred_by ?? '',
           lastContact: u.last_contact ?? '',
           notes: u.notes ?? '',
@@ -169,6 +173,10 @@ const Index = ({ onLogout }: IndexProps) => {
     if (!editingUser) return;
     
     try {
+      // Find the employee ID based on the name
+      const selectedEmployee = employees.find(emp => emp.name === userData.assignedTo);
+      const employeeId = selectedEmployee ? selectedEmployee.id : null;
+
       const { error } = await supabase
         .from('clients')
         .update({
@@ -178,7 +186,7 @@ const Index = ({ onLogout }: IndexProps) => {
           company: userData.company || '',
           priority: userData.priority || 'normal',
           is_using_platform: userData.usingPlatform || false,
-          employee_id: userData.assignedTo || '',
+          employee_id: employeeId,
           referred_by: userData.referredBy || '',
           last_contact: userData.lastContact || null,
           notes: userData.notes || '',
@@ -193,6 +201,7 @@ const Index = ({ onLogout }: IndexProps) => {
       if (fetchError) throw fetchError;
       
       if (allUsers) {
+        // Map the data properly, including finding employee names
         setUsers((allUsers as any[]).map((u) => ({
           id: u.id?.toString() ?? '',
           name: u.name ?? '',
@@ -201,7 +210,7 @@ const Index = ({ onLogout }: IndexProps) => {
           company: u.company ?? '',
           priority: u.priority === 'high' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
-          assignedTo: u.employee_id ?? '',
+          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? '',
           referredBy: u.referred_by ?? '',
           lastContact: u.last_contact ?? '',
           notes: u.notes ?? '',
@@ -246,7 +255,7 @@ const Index = ({ onLogout }: IndexProps) => {
   };
 
   // Get unique assignees for filter
-  const assignees = [...new Set(users.map(user => user.assignedTo).filter(Boolean))];
+  const assignees = employees.map(emp => emp.name);
 
   // Stats
   const highPriorityCount = users.filter(u => u.priority === 'high').length;
