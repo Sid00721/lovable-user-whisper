@@ -208,7 +208,7 @@ const Index = ({ onLogout }: IndexProps) => {
           email: u.email ?? '',
           phone: u.phone ?? '',
           company: u.company ?? '',
-          priority: u.priority === 'high' ? 'high' : 'normal',
+          priority: u.priority === 'High' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
           assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? '',
           referredBy: u.referred_by ?? '',
