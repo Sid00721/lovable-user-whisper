@@ -21,6 +21,33 @@ export function UserCard({ user, onEdit }: UserCardProps) {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const formatPhoneNumber = (phone?: string) => {
+    if (!phone) return null;
+    // Remove all non-numeric characters
+    const cleaned = phone.replace(/\D/g, '');
+    // Add + if not present and assume US number if no country code
+    if (cleaned.length === 10) return `+1${cleaned}`;
+    if (cleaned.length > 10 && !cleaned.startsWith('1')) return `+${cleaned}`;
+    if (cleaned.length === 11 && cleaned.startsWith('1')) return `+${cleaned}`;
+    return `+${cleaned}`;
+  };
+
+  const handleEmailClick = () => {
+    const subject = encodeURIComponent('Follow up from our team');
+    const body = encodeURIComponent(`Hi ${user.name},\n\nI hope this message finds you well. I wanted to follow up with you regarding your account.\n\nBest regards,\nThe Team`);
+    window.open(`mailto:${user.email}?subject=${subject}&body=${body}`);
+  };
+
+  const handleWhatsAppClick = () => {
+    const formattedPhone = formatPhoneNumber(user.phone);
+    if (!formattedPhone) {
+      alert('No phone number available for this contact');
+      return;
+    }
+    const message = encodeURIComponent(`Hi ${user.name}, I hope you're doing well! I wanted to reach out to follow up with you.`);
+    window.open(`https://wa.me/${formattedPhone}?text=${message}`);
+  };
+
   return (
     <Card className="p-6 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-4">
@@ -76,7 +103,7 @@ export function UserCard({ user, onEdit }: UserCardProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => window.open(`mailto:${user.email}`)}
+          onClick={handleEmailClick}
         >
           <Mail className="h-4 w-4 mr-1" />
           Email
@@ -84,7 +111,8 @@ export function UserCard({ user, onEdit }: UserCardProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => window.open(`https://wa.me/?text=Hi ${user.name}`)}
+          onClick={handleWhatsAppClick}
+          disabled={!user.phone}
         >
           <MessageSquare className="h-4 w-4 mr-1" />
           WhatsApp
