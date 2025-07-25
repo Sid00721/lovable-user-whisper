@@ -25,13 +25,25 @@ interface IndexProps {
 const Index = ({ onLogout }: IndexProps) => {
   const { toast } = useToast();
 
-  // Team members - your 4 employees
-  const employees: Employee[] = [
-    { id: "550e8400-e29b-41d4-a716-446655440001", name: "Andre", email: "andre@voqo.ai", role: "" },
-    { id: "550e8400-e29b-41d4-a716-446655440002", name: "Amith", email: "amith@voqo.ai", role: "" },
-    { id: "550e8400-e29b-41d4-a716-446655440003", name: "Adam", email: "adam@voqo.ai", role: "" },
-    { id: "550e8400-e29b-41d4-a716-446655440004", name: "Sid", email: "sid@voqo.ai", role: "" }
-  ];
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  // Fetch employees from database
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      const { data, error } = await supabase.from('employees').select('*');
+      if (error) {
+        console.error('Error fetching employees:', error);
+      } else if (data) {
+        setEmployees(data.map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          email: '',
+          role: ''
+        })));
+      }
+    };
+    fetchEmployees();
+  }, []);
 
   const [users, setUsers] = useState<User[]>([]);
 
@@ -76,7 +88,7 @@ const Index = ({ onLogout }: IndexProps) => {
       }
     };
     fetchUsers();
-  }, []);
+  }, [employees]);
 
   const [affiliates, setAffiliates] = useState<Affiliate[]>([
     {
