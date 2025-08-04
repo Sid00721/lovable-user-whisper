@@ -2,7 +2,8 @@ import { User } from "@/types/crm";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Mail, Phone, MessageSquare } from "lucide-react";
+import { Edit, Mail, Phone, MessageSquare, UserPlus, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface UserCardProps {
   user: User;
@@ -68,9 +69,30 @@ export function UserCard({ user, onEdit }: UserCardProps) {
             {user.usingPlatform ? "Yes" : "No"}
           </Badge>
         </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-muted-foreground">Assigned To:</span>
-          <span className="text-sm font-medium">{user.assignedTo}</span>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Assigned To:</span>
+            {!user.assignedTo && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>This user is not assigned to any team member</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+          {user.assignedTo ? (
+            <span className="text-sm font-medium">{user.assignedTo}</span>
+          ) : (
+            <Button variant="outline" size="sm" onClick={() => onEdit(user)} className="bg-blue-100 text-blue-800 hover:bg-blue-200 flex items-center gap-2">
+              <UserPlus className="h-4 w-4 mr-1" />
+              Assign
+            </Button>
+          )}
         </div>
         <div className="flex justify-between">
           <span className="text-sm text-muted-foreground">Last Contact:</span>

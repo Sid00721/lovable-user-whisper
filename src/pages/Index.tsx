@@ -14,8 +14,13 @@ import { useToast } from "@/hooks/use-toast";
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = "https://tbplhgbtnksyqnuqfncr.supabase.co";
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRicGxoZ2J0bmtzeXFudXFmbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMzMyMDYsImV4cCI6MjA2ODgwOTIwNn0.0whaVn_vkDUBF9xM_AYPFZBCnv31HiqJe9WikjBm4Hk";
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Supabase URL and anonymous key are required.");
+}
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface IndexProps {
