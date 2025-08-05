@@ -3,13 +3,14 @@ import { User, Affiliate, Employee } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
 import { AffiliateTracker } from "@/components/AffiliateTracker";
+import { PaymentAnalytics } from "@/pages/PaymentAnalytics";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Users, TrendingUp, Clock } from "lucide-react";
+import { Plus, Search, Users, TrendingUp, Clock, CreditCard, DollarSign, AlertTriangle, Zap, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 import { createClient } from '@supabase/supabase-js';
@@ -38,6 +39,11 @@ const Index = ({ onLogout }: IndexProps) => {
       const { data, error } = await supabase.from('employees').select('*');
       if (error) {
         console.error('Error fetching employees:', error);
+        toast({
+          title: "Error fetching employees",
+          description: "Failed to fetch employee data",
+          variant: "destructive"
+        });
       } else if (data) {
         setEmployees(data.map(emp => ({
           id: emp.id,
@@ -57,6 +63,11 @@ const Index = ({ onLogout }: IndexProps) => {
       const { data, error } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
       if (error) {
         console.error('Error fetching users:', error);
+        toast({
+          title: "Error fetching users",
+          description: "Failed to fetch user data",
+          variant: "destructive"
+        });
       } else if (data) {
         // Map Supabase data to User type if needed
         type ClientRow = {
@@ -73,6 +84,12 @@ const Index = ({ onLogout }: IndexProps) => {
           notes?: string;
           commission_approved?: boolean;
           created_at?: string;
+          is_upsell_opportunity?: boolean;
+          stripe_customer_id?: string;
+          subscription_status?: string;
+          subscription_product?: string;
+          subscription_plan?: string;
+          last_payment_date?: string;
         };
 
         setUsers((data as ClientRow[]).map((u) => ({
@@ -83,12 +100,18 @@ const Index = ({ onLogout }: IndexProps) => {
           company: u.company ?? '',
           priority: u.priority === 'High' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
-          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? '',
+          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? 'unassigned',
           referredBy: u.referred_by ?? '',
           lastContact: u.last_contact ?? '',
           notes: u.notes ?? '',
+          isUpsellOpportunity: u.is_upsell_opportunity ?? false,
           commissionApproved: u.commission_approved ?? false,
-          createdAt: u.created_at ?? ''
+          createdAt: u.created_at ?? '',
+          stripeCustomerId: u.stripe_customer_id ?? '',
+          subscriptionStatus: u.subscription_status ?? '',
+          subscriptionProduct: u.subscription_product ?? '',
+          subscriptionPlan: getPlanName(u.subscription_plan) ?? '',
+          lastPaymentDate: u.last_payment_date ?? ''
         })));
       }
     };
@@ -109,8 +132,26 @@ const Index = ({ onLogout }: IndexProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [assignedFilter, setAssignedFilter] = useState<string>("all");
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>("all");
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
+  const [showPaymentAnalytics, setShowPaymentAnalytics] = useState(false);
+
+  const getPlanName = (planId: string | undefined) => {
+    if (!planId) return 'Unknown';
+    switch (planId) {
+      case 'price_1QfZbBDcOkUDzxSV2PXVe3UB':
+        return 'professional';
+      case 'price_1QfZbEDcOkUDzxSVIYlwMXiP':
+        return 'starter';
+      case 'price_1QfZbeDcOkUDzxSVejs1wOCN':
+        return 'free';
+      default:
+        return planId;
+    }
+  };
+
+
 
   // Filter users based on search and filters
   const filteredUsers = users.filter(user => {
@@ -120,15 +161,28 @@ const Index = ({ onLogout }: IndexProps) => {
     
     const matchesPriority = priorityFilter === "all" || user.priority === priorityFilter;
     const matchesAssigned = assignedFilter === "all" || user.assignedTo === assignedFilter;
+    const matchesSubscription = subscriptionFilter === "all" || 
+                               (subscriptionFilter === "active" && user.subscriptionStatus === "active") ||
+                               (subscriptionFilter === "trialing" && user.subscriptionStatus === "trialing") ||
+                               (subscriptionFilter === "past_due" && user.subscriptionStatus === "past_due") ||
+                               (subscriptionFilter === "canceled" && user.subscriptionStatus === "canceled") ||
+                               (subscriptionFilter === "no_subscription" && !user.stripeCustomerId) ||
+                               (subscriptionFilter === "free" && user.subscriptionPlan === "free") ||
+                               (subscriptionFilter === "starter" && user.subscriptionPlan === "starter") ||
+                               (subscriptionFilter === "professional" && user.subscriptionPlan === "professional");
     
-    return matchesSearch && matchesPriority && matchesAssigned;
+    return matchesSearch && matchesPriority && matchesAssigned && matchesSubscription;
   });
 
   const handleAddUser = async (userData: Partial<User>) => {
     try {
       // Find the employee ID based on the name
-      const selectedEmployee = employees.find(emp => emp.name === userData.assignedTo);
+      const selectedEmployee = userData.assignedTo && userData.assignedTo !== 'unassigned' 
+        ? employees.find(emp => emp.name === userData.assignedTo) 
+        : null;
       const employeeId = selectedEmployee ? selectedEmployee.id : null;
+
+
 
       const { data, error } = await supabase
         .from('clients')
@@ -143,6 +197,7 @@ const Index = ({ onLogout }: IndexProps) => {
           referred_by: userData.referredBy || '',
           last_contact: userData.lastContact || null,
           notes: userData.notes || '',
+          is_upsell_opportunity: userData.isUpsellOpportunity || false,
           commission_approved: userData.commissionApproved || false
         }])
         .select()
@@ -163,12 +218,18 @@ const Index = ({ onLogout }: IndexProps) => {
           company: u.company ?? '',
           priority: u.priority === 'High' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
-          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? '',
+          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? 'unassigned',
           referredBy: u.referred_by ?? '',
           lastContact: u.last_contact ?? '',
           notes: u.notes ?? '',
+          isUpsellOpportunity: u.is_upsell_opportunity ?? false,
           commissionApproved: u.commission_approved ?? false,
-          createdAt: u.created_at ?? ''
+          createdAt: u.created_at ?? '',
+          stripeCustomerId: u.stripe_customer_id ?? '',
+          subscriptionStatus: u.subscription_status ?? '',
+          subscriptionProduct: u.subscription_product ?? '',
+          subscriptionPlan: u.subscription_plan ?? '',
+          lastPaymentDate: u.last_payment_date ?? ''
         })));
       }
 
@@ -191,7 +252,9 @@ const Index = ({ onLogout }: IndexProps) => {
     
     try {
       // Find the employee ID based on the name
-      const selectedEmployee = employees.find(emp => emp.name === userData.assignedTo);
+      const selectedEmployee = userData.assignedTo && userData.assignedTo !== 'unassigned' 
+        ? employees.find(emp => emp.name === userData.assignedTo) 
+        : null;
       const employeeId = selectedEmployee ? selectedEmployee.id : null;
 
       const { error } = await supabase
@@ -207,6 +270,7 @@ const Index = ({ onLogout }: IndexProps) => {
           referred_by: userData.referredBy || '',
           last_contact: userData.lastContact || null,
           notes: userData.notes || '',
+          is_upsell_opportunity: userData.isUpsellOpportunity || false,
           commission_approved: userData.commissionApproved || false
         })
         .eq('id', editingUser.id);
@@ -227,10 +291,11 @@ const Index = ({ onLogout }: IndexProps) => {
           company: u.company ?? '',
           priority: u.priority === 'High' ? 'high' : 'normal',
           usingPlatform: u.is_using_platform ?? false,
-          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? '',
+          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? 'unassigned',
           referredBy: u.referred_by ?? '',
           lastContact: u.last_contact ?? '',
           notes: u.notes ?? '',
+          isUpsellOpportunity: u.is_upsell_opportunity ?? false,
           commissionApproved: u.commission_approved ?? false,
           createdAt: u.created_at ?? ''
         })));
@@ -285,59 +350,132 @@ const Index = ({ onLogout }: IndexProps) => {
     return lastContact < weekAgo;
   }).length;
 
+  // Subscription Stats
+  const activeSubscriptionsCount = users.filter(u => u.subscriptionStatus === 'active').length;
+  const totalSubscribersCount = users.filter(u => u.stripeCustomerId).length;
+  const trialSubscriptionsCount = users.filter(u => u.subscriptionStatus === 'trialing').length;
+  const pastDueCount = users.filter(u => u.subscriptionStatus === 'past_due').length;
+
+  // Handle navigation
+  if (showPaymentAnalytics) {
+    return <PaymentAnalytics onBack={() => setShowPaymentAnalytics(false)} />;
+  }
+
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <Header onLogout={onLogout} />
-        
-        {/* Add User Button */}
-        <div className="flex justify-end">
-          <Button onClick={openAddForm}>
+    <div className="min-h-screen bg-background">
+      <Header onLogout={onLogout} />
+      
+      <main className="container mx-auto px-6 py-8 max-w-7xl">
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center mb-8">
+          <Button 
+            onClick={() => setShowPaymentAnalytics(true)} 
+            variant="outline" 
+            className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Payment Analytics
+          </Button>
+          <Button onClick={openAddForm} className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
             <Plus className="h-4 w-4 mr-2" />
             Add User
           </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold">{users.length}</div>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">High Priority</CardTitle>
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">High Priority</CardTitle>
               <Badge className="bg-high-priority text-high-priority-foreground">🔥</Badge>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{highPriorityCount}</div>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold">{highPriorityCount}</div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Using Platform</CardTitle>
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Using Platform</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{usingPlatformCount}</div>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold">{usingPlatformCount}</div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Needs Contact</CardTitle>
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Needs Contact</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{needsContactCount}</div>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold">{needsContactCount}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Subscription Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-green-200 bg-green-50/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Active Subscriptions</CardTitle>
+              <CreditCard className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold text-green-700">{activeSubscriptionsCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {totalSubscribersCount > 0 ? `${Math.round((activeSubscriptionsCount / totalSubscribersCount) * 100)}% of subscribers` : 'No subscribers yet'}
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-blue-200 bg-blue-50/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Subscribers</CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold text-blue-700">{totalSubscribersCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {users.length > 0 ? `${Math.round((totalSubscribersCount / users.length) * 100)}% of all users` : 'No users yet'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-purple-200 bg-purple-50/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Trial Users</CardTitle>
+              <Zap className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold text-purple-700">{trialSubscriptionsCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Potential conversions
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-orange-200 bg-orange-50/50">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Past Due</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="text-2xl font-semibold text-orange-700">{pastDueCount}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Requires attention
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -349,12 +487,12 @@ const Index = ({ onLogout }: IndexProps) => {
         />
 
         {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex gap-4 flex-wrap">
+        <Card className="mb-8 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+          <CardContent className="p-4">
+            <div className="flex gap-6 flex-wrap">
               <div className="flex-1 min-w-64">
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground/60" />
                   <Input
                     placeholder="Search users..."
                     value={searchTerm}
@@ -388,12 +526,29 @@ const Index = ({ onLogout }: IndexProps) => {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                <SelectTrigger className="w-56">
+                  <SelectValue placeholder="Filter by subscription" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subscriptions</SelectItem>
+                  <SelectItem value="active">✓ Active</SelectItem>
+                  <SelectItem value="trialing">🎯 Trial</SelectItem>
+                  <SelectItem value="past_due">⚠ Past Due</SelectItem>
+                  <SelectItem value="canceled">✗ Canceled</SelectItem>
+                  <SelectItem value="no_subscription">No Subscription</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="starter">Starter</SelectItem>
+                  <SelectItem value="professional">Professional</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
         {/* Users Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
           {filteredUsers.map((user) => (
             <UserCard
               key={user.id}
@@ -404,9 +559,9 @@ const Index = ({ onLogout }: IndexProps) => {
         </div>
 
         {filteredUsers.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <p className="text-muted-foreground">No users found matching your criteria</p>
+          <Card className="border-0 shadow-sm bg-card/50 backdrop-blur-sm">
+            <CardContent className="text-center py-16">
+              <p className="text-muted-foreground text-lg">No users found matching your criteria</p>
             </CardContent>
           </Card>
         )}
@@ -419,7 +574,7 @@ const Index = ({ onLogout }: IndexProps) => {
           onSave={editingUser ? handleEditUser : handleAddUser}
           employees={employees}
         />
-      </div>
+      </main>
     </div>
   );
 };

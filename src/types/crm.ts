@@ -9,16 +9,23 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  phone?: string;
+  phone: string;
   company?: string;
   priority: 'high' | 'normal';
   usingPlatform: boolean;
-  assignedTo: string;
+  assignedTo?: string;
   referredBy?: string;
   lastContact?: string;
-  notes: string;
-  commissionApproved: boolean;
+  notes?: string;
+  commissionApproved?: boolean;
   createdAt: string;
+  isUpsellOpportunity?: boolean;
+  // Subscription fields
+  stripeCustomerId?: string;
+  subscriptionStatus?: string;
+  subscriptionProduct?: string;
+  subscriptionPlan?: string;
+  lastPaymentDate?: string;
 }
 
 export interface Affiliate {

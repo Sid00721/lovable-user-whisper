@@ -7,15 +7,28 @@ interface HeaderProps {
 
 export function Header({ onLogout }: HeaderProps) {
   return (
-    <div className="flex justify-between items-center mb-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Internal CRM</h1>
-        <p className="text-muted-foreground">Manage your early users and track affiliates</p>
+    <header className="border-b bg-background sticky top-0 z-50">
+      <div className="container mx-auto px-6 py-4 max-w-7xl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold">
+              Internal CRM
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Manage your users, track engagement, and streamline your workflow
+            </p>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            onClick={onLogout}
+            className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </div>
-      <Button variant="outline" onClick={onLogout} className="flex items-center gap-2">
-        <LogOut className="h-4 w-4" />
-        Logout
-      </Button>
-    </div>
+    </header>
   );
 }

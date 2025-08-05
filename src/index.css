@@ -1,67 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Billion-dollar SaaS design system - Notion-inspired minimalism */
 
 @layer base {
   :root {
-    --background: 249 100% 99%;
-    --foreground: 222 47% 11%;
+    /* Strict color palette - Base tokens */
+    --background: 0 0% 100%; /* Base-100 #FFFFFF */
+    --foreground: 210 17% 10%; /* Ink-100 #1A1A1D */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%; /* Base-100 #FFFFFF */
+    --card-foreground: 210 17% 10%; /* Ink-100 #1A1A1D */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 0 0% 100%; /* Base-100 #FFFFFF */
+    --popover-foreground: 210 17% 10%; /* Ink-100 #1A1A1D */
 
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
+    /* Accent color for primary actions */
+    --primary: 220 100% 66%; /* Accent #4F89FF */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    /* Base-90 and Base-80 for secondary elements */
+    --secondary: 210 14% 97%; /* Base-90 #F7F8F9 */
+    --secondary-foreground: 220 9% 29%; /* Ink-80 #44444A */
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 17% 95%; /* Base-80 #EFF1F3 */
+    --muted-foreground: 220 9% 29%; /* Ink-80 #44444A */
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 210 14% 97%; /* Base-90 #F7F8F9 */
+    --accent-foreground: 210 17% 10%; /* Ink-100 #1A1A1D */
 
-    --success: 142 76% 36%;
-    --success-foreground: 210 40% 98%;
+    /* Status colors using tints of base palette */
+    --success: 142 35% 45%;
+    --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 222 47% 11%;
+    --warning: 38 65% 55%;
+    --warning-foreground: 210 17% 10%;
 
-    --high-priority: 0 84% 60%;
-    --high-priority-foreground: 210 40% 98%;
+    --high-priority: 0 65% 55%;
+    --high-priority-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Subtle borders using Base-80 */
+    --border: 210 17% 95%; /* Base-80 #EFF1F3 */
+    --input: 210 17% 95%; /* Base-80 #EFF1F3 */
+    --ring: 220 100% 66%; /* Accent #4F89FF */
 
+    /* 8px corner radius */
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 210 14% 97%; /* Base-90 #F7F8F9 */
+    --sidebar-foreground: 220 9% 29%; /* Ink-80 #44444A */
+    --sidebar-primary: 210 17% 10%; /* Ink-100 #1A1A1D */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 17% 95%; /* Base-80 #EFF1F3 */
+    --sidebar-accent-foreground: 210 17% 10%;
+    --sidebar-border: 210 17% 95%;
+    --sidebar-ring: 220 100% 66%;
+  }
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+  * {
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+  }
 
-    --sidebar-primary: 240 5.9% 10%;
+  body {
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0%;
+  }
 
-    --sidebar-primary-foreground: 0 0% 98%;
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0%;
+  }
 
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+  .font-medium {
+    font-weight: 500;
   }
 
   .dark {
