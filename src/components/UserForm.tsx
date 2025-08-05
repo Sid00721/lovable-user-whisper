@@ -271,7 +271,7 @@ export function UserForm({ open, onOpenChange, user, onSave, employees }: UserFo
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Subscription</SelectItem>
+                      <SelectItem value="none">No Subscription</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="trialing">Trialing</SelectItem>
                       <SelectItem value="past_due">Past Due</SelectItem>
