@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, Calendar, CreditCard, Users, BarChart3, Download } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, CreditCard, Users, BarChart3, Download, ChevronDown, ChevronRight } from "lucide-react";
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -52,6 +52,7 @@ export function PaymentHistory({ users }: PaymentHistoryProps) {
   const [selectedTier, setSelectedTier] = useState<string>("all");
   const [timeRange, setTimeRange] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchPaymentHistory = async () => {
@@ -177,6 +178,32 @@ export function PaymentHistory({ users }: PaymentHistoryProps) {
     
     return matchesUser && matchesTier && matchesTimeRange;
   });
+
+  // Group payments by customer and sort by date
+  const groupedPayments = filteredPayments.reduce((acc, payment) => {
+    if (!acc[payment.customerId]) {
+      acc[payment.customerId] = [];
+    }
+    acc[payment.customerId].push(payment);
+    return acc;
+  }, {} as Record<string, PaymentRecord[]>);
+
+  // Sort payments within each group by date (newest first)
+  Object.keys(groupedPayments).forEach(customerId => {
+    groupedPayments[customerId].sort((a, b) => 
+      new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime()
+    );
+  });
+
+  const toggleCustomerExpansion = (customerId: string) => {
+    const newExpanded = new Set(expandedCustomers);
+    if (newExpanded.has(customerId)) {
+      newExpanded.delete(customerId);
+    } else {
+      newExpanded.add(customerId);
+    }
+    setExpandedCustomers(newExpanded);
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -441,41 +468,102 @@ export function PaymentHistory({ users }: PaymentHistoryProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPayments.slice(0, 50).map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{payment.customerName}</div>
-                        <div className="text-sm text-muted-foreground">{payment.customerEmail}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{payment.subscriptionProduct}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{formatCurrency(payment.amount)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{formatDate(payment.paymentDate)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={payment.status === 'paid' ? 'default' : 'destructive'}
-                        className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
-                      >
-                        {payment.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm font-mono">{payment.invoiceId}</div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {Object.entries(groupedPayments).slice(0, 50).map(([customerId, payments]) => {
+                  const latestPayment = payments[0];
+                  const isExpanded = expandedCustomers.has(customerId);
+                  const hasMultiplePayments = payments.length > 1;
+                  
+                  return (
+                    <>
+                      {/* Latest payment row */}
+                      <TableRow key={`${customerId}-latest`} className="hover:bg-gray-50">
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {hasMultiplePayments && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={() => toggleCustomerExpansion(customerId)}
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
+                            )}
+                            <div>
+                              <div className="font-medium">{latestPayment.customerName}</div>
+                              <div className="text-sm text-muted-foreground">{latestPayment.customerEmail}</div>
+                              {hasMultiplePayments && (
+                                <div className="text-xs text-blue-600 mt-1">
+                                  {payments.length} total payments
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{latestPayment.subscriptionProduct}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{formatCurrency(latestPayment.amount)}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{formatDate(latestPayment.paymentDate)}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={latestPayment.status === 'paid' ? 'default' : 'destructive'}
+                            className={latestPayment.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                          >
+                            {latestPayment.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm font-mono">{latestPayment.invoiceId}</div>
+                        </TableCell>
+                      </TableRow>
+                      
+                      {/* Historical payments (when expanded) */}
+                      {isExpanded && payments.slice(1).map((payment, index) => (
+                        <TableRow key={`${customerId}-${index}`} className="bg-gray-50/50">
+                          <TableCell className="pl-12">
+                            <div className="text-sm text-muted-foreground">
+                              Historical payment #{index + 2}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">{payment.subscriptionProduct}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{formatCurrency(payment.amount)}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">{formatDate(payment.paymentDate)}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={payment.status === 'paid' ? 'default' : 'destructive'}
+                              className={payment.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                            >
+                              {payment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm font-mono">{payment.invoiceId}</div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  );
+                })}
               </TableBody>
             </Table>
-            {filteredPayments.length > 50 && (
+            {Object.keys(groupedPayments).length > 50 && (
               <div className="p-4 text-center text-sm text-muted-foreground border-t">
-                Showing first 50 of {filteredPayments.length} payments
+                Showing first 50 of {Object.keys(groupedPayments).length} customers
               </div>
             )}
           </div>

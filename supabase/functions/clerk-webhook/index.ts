@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.0';
 import { Webhook } from 'npm:svix@1.24.0';
+import Stripe from 'https://esm.sh/stripe@14.21.0';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,6 +83,50 @@ serve(async (request) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Try to find existing Stripe customer by email
+    let stripeCustomerId = null;
+    let subscriptionData = {};
+    
+    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
+    if (stripeSecretKey) {
+      try {
+        const stripe = new Stripe(stripeSecretKey, {
+          apiVersion: '2023-10-16',
+        });
+        
+        // Search for existing Stripe customer by email
+        const customers = await stripe.customers.list({
+          email: email,
+          limit: 1,
+        });
+        
+        if (customers.data.length > 0) {
+          const customer = customers.data[0];
+          stripeCustomerId = customer.id;
+          
+          // Get active subscriptions for this customer
+          const subscriptions = await stripe.subscriptions.list({
+            customer: customer.id,
+            status: 'all',
+            limit: 1,
+          });
+          
+          if (subscriptions.data.length > 0) {
+            const subscription = subscriptions.data[0];
+            subscriptionData = {
+              subscription_status: subscription.status,
+              subscription_product: subscription.items.data[0]?.price?.product || null,
+              subscription_plan: subscription.items.data[0]?.price?.id || null,
+              last_payment_date: subscription.current_period_start ? new Date(subscription.current_period_start * 1000).toISOString() : null,
+            };
+          }
+        }
+      } catch (stripeError) {
+        console.error('Error fetching Stripe data:', stripeError);
+        // Continue without Stripe data if there's an error
+      }
+    }
+
     const { data, error } = await supabase
       .from('clients')
       .insert({
@@ -89,6 +134,8 @@ serve(async (request) => {
         name: name,
         email: email,
         phone: phone,
+        stripe_customer_id: stripeCustomerId,
+        ...subscriptionData,
         created_at: new Date().toISOString(),
       });
 

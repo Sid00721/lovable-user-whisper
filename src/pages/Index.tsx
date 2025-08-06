@@ -342,18 +342,12 @@ const Index = ({ onLogout }: IndexProps) => {
   // Stats
   const highPriorityCount = users.filter(u => u.priority === 'high').length;
   const usingPlatformCount = users.filter(u => u.usingPlatform).length;
-  const needsContactCount = users.filter(u => {
-    if (!u.lastContact) return true;
-    const lastContact = new Date(u.lastContact);
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    return lastContact < weekAgo;
-  }).length;
+  const needsContactCount = users.filter(u => u.assignedTo === 'unassigned').length;
 
   // Subscription Stats
   const activeSubscriptionsCount = users.filter(u => u.subscriptionStatus === 'active').length;
-  const totalSubscribersCount = users.filter(u => u.stripeCustomerId).length;
-  const trialSubscriptionsCount = users.filter(u => u.subscriptionStatus === 'trialing').length;
+  const totalSubscribersCount = users.filter(u => u.stripeCustomerId || u.subscriptionPlan).length;
+  const freeUserCount = users.filter(u => u.subscriptionPlan === 'free' || (u.subscriptionProduct && u.subscriptionProduct.includes('Free Tier'))).length;
   const pastDueCount = users.filter(u => u.subscriptionStatus === 'past_due').length;
 
   // Handle navigation
@@ -455,11 +449,11 @@ const Index = ({ onLogout }: IndexProps) => {
 
           <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-purple-200 bg-purple-50/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Trial Users</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Free Tier Users</CardTitle>
               <Zap className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent className="p-0">
-              <div className="text-2xl font-semibold text-purple-700">{trialSubscriptionsCount}</div>
+              <div className="text-2xl font-semibold text-purple-700">{freeUserCount}</div>
               <p className="text-xs text-muted-foreground mt-1">
                 Potential conversions
               </p>

@@ -1,22 +1,33 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const authStatus = localStorage.getItem("crm_authenticated");
-    setIsAuthenticated(authStatus === "true");
-    setIsLoading(false);
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+      setIsLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = (success: boolean) => {
-    setIsAuthenticated(success);
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    setIsAuthenticated(true);
   };
 
-  const logout = () => {
-    localStorage.removeItem("crm_authenticated");
+  const logout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
   };
 

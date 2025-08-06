@@ -3,45 +3,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LoginFormProps {
   onLogin: (success: boolean) => void;
 }
 
 export function LoginForm({ onLogin }: LoginFormProps) {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { login } = useAuth();
 
-  // You can change this password to whatever you want
-  const CORRECT_PASSWORD = "team2025!";
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate a brief loading state
-    setTimeout(() => {
-      if (password === CORRECT_PASSWORD) {
-        localStorage.setItem("crm_authenticated", "true");
-        onLogin(true);
-        toast({
-          title: "Access granted",
-          description: "Welcome to the Internal CRM",
-        });
-      } else {
-        toast({
-          title: "Access denied",
-          description: "Incorrect password. Please try again.",
-          variant: "destructive",
-        });
-        setPassword("");
-      }
+    try {
+      await login(email, password);
+      toast({
+        title: "Access granted",
+        description: "Welcome to the Internal CRM",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Access denied",
+        description: error.message || "Invalid credentials. Please try again.",
+        variant: "destructive",
+      });
+      setPassword("");
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -53,11 +50,27 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           </div>
           <CardTitle className="text-2xl font-bold">Internal CRM Access</CardTitle>
           <p className="text-muted-foreground">
-            Enter the team password to access the CRM system
+            Enter your credentials to access the CRM system
           </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  required
+                  disabled={isLoading}
+                  className="pl-10"
+                />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
@@ -66,7 +79,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter team password"
+                  placeholder="Enter your password"
                   required
                   disabled={isLoading}
                   className="pr-10"
@@ -93,7 +106,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           </form>
           <div className="mt-4 text-center">
             <p className="text-xs text-muted-foreground">
-              Contact your team lead if you don't have the password
+              Contact your team lead if you need access
             </p>
           </div>
         </CardContent>
