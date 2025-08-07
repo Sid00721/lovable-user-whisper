@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import { PaymentAnalytics } from "./pages/PaymentAnalytics";
+import UserAnalytics from "./pages/UserAnalytics";
 import { LoginForm } from "./components/LoginForm";
 import { useAuth } from "./hooks/useAuth";
 import NotFound from "./pages/NotFound";
@@ -46,6 +47,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index onLogout={logout} />} />
             <Route path="/payments" element={<PaymentAnalytics onBack={() => window.history.back()} />} />
+            <Route path="/analytics" element={<UserAnalytics />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

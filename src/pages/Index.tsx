@@ -228,7 +228,7 @@ const Index = ({ onLogout }: IndexProps) => {
           stripeCustomerId: u.stripe_customer_id ?? '',
           subscriptionStatus: u.subscription_status ?? '',
           subscriptionProduct: u.subscription_product ?? '',
-          subscriptionPlan: u.subscription_plan ?? '',
+          subscriptionPlan: getPlanName(u.subscription_plan) ?? '',
           lastPaymentDate: u.last_payment_date ?? ''
         })));
       }
@@ -271,7 +271,12 @@ const Index = ({ onLogout }: IndexProps) => {
           last_contact: userData.lastContact || null,
           notes: userData.notes || '',
           is_upsell_opportunity: userData.isUpsellOpportunity || false,
-          commission_approved: userData.commissionApproved || false
+          commission_approved: userData.commissionApproved || false,
+          stripe_customer_id: userData.stripeCustomerId || '',
+          subscription_status: userData.subscriptionStatus || '',
+          subscription_product: userData.subscriptionProduct || '',
+          subscription_plan: userData.subscriptionPlan || '',
+          last_payment_date: userData.lastPaymentDate || null
         })
         .eq('id', editingUser.id);
 
@@ -297,7 +302,12 @@ const Index = ({ onLogout }: IndexProps) => {
           notes: u.notes ?? '',
           isUpsellOpportunity: u.is_upsell_opportunity ?? false,
           commissionApproved: u.commission_approved ?? false,
-          createdAt: u.created_at ?? ''
+          createdAt: u.created_at ?? '',
+          stripeCustomerId: u.stripe_customer_id ?? '',
+          subscriptionStatus: u.subscription_status ?? '',
+          subscriptionProduct: u.subscription_product ?? '',
+          subscriptionPlan: getPlanName(u.subscription_plan) ?? '',
+          lastPaymentDate: u.last_payment_date ?? ''
         })));
       }
 
@@ -357,7 +367,7 @@ const Index = ({ onLogout }: IndexProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header onLogout={onLogout} />
+      <Header onLogout={onLogout} showAnalyticsButton={true} />
       
       <main className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Navigation Buttons */}
