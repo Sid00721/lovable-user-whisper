@@ -34,10 +34,21 @@ def get_clients_without_stripe_id(supabase: Client):
     """Fetch clients who don't have Stripe customer IDs"""
     print("🔄 Fetching clients without Stripe customer IDs...")
     try:
-        result = supabase.table('clients').select('id, name, email, stripe_customer_id').is_('stripe_customer_id', 'null').execute()
-        if result.data:
-            print(f"✅ Found {len(result.data)} clients without Stripe customer IDs.")
-            return result.data
+        # Get clients with null stripe_customer_id
+        result_null = supabase.table('clients').select('id, name, email, stripe_customer_id').is_('stripe_customer_id', 'null').execute()
+        # Get clients with empty string stripe_customer_id
+        result_empty = supabase.table('clients').select('id, name, email, stripe_customer_id').eq('stripe_customer_id', '').execute()
+        
+        # Combine both results
+        all_clients = []
+        if result_null.data:
+            all_clients.extend(result_null.data)
+        if result_empty.data:
+            all_clients.extend(result_empty.data)
+            
+        if all_clients:
+            print(f"✅ Found {len(all_clients)} clients without Stripe customer IDs.")
+            return all_clients
         else:
             print("  ✅ All clients already have Stripe customer IDs.")
             return []
