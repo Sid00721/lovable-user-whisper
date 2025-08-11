@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     const calls = db.collection("calls");
     const agents = db.collection("agents");
 
-    let query = {};
+    let query: Record<string, unknown> = {};
 
     // If userEmail is provided, filter by that user's agent
     if (userEmail) {
@@ -69,12 +69,29 @@ Deno.serve(async (req) => {
     const hasNextPage = page < totalPages;
     const hasPreviousPage = page > 1;
 
-    // Get paginated transcripts
-    const transcripts = await calls.find(query)
-      .sort({ start_time: -1 }) // Sort by newest first
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    // Get paginated transcripts enriched with agent info (email/name)
+    const transcripts = await calls.aggregate([
+      { $match: query },
+      { $sort: { start_time: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: 'agents',
+          localField: 'agent_id',
+          foreignField: '_id',
+          as: 'agent_docs'
+        }
+      },
+      { $unwind: { path: '$agent_docs', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          agent_email: { $ifNull: ['$agent_docs.email', '$agent_docs.created_by'] },
+          agent_name: '$agent_docs.name'
+        }
+      },
+      { $project: { agent_docs: 0 } }
+    ]).toArray();
 
     return new Response(JSON.stringify({
       transcripts,
@@ -87,7 +104,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Edge function error:', error);
     console.error('Error stack:', error.stack);
     return new Response(JSON.stringify({ 

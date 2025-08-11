@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Play, Pause, Download } from 'lucide-react';
 
 // Helper function to convert UTC time to Sydney time
 const toSydneyTime = (utcTime: string | number) => {
@@ -32,7 +33,80 @@ const UserAnalytics: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPreviousPage, setHasPreviousPage] = useState(false);
+  const [recordings, setRecordings] = useState<{[key: string]: any[]}>({});
+  const [loadingRecordings, setLoadingRecordings] = useState<{[key: string]: boolean}>({});
+  const [playingAudio, setPlayingAudio] = useState<string | null>(null);
+  const audioRefs = useRef<{[key: string]: HTMLAudioElement | null}>({});
   const ITEMS_PER_PAGE = 10;
+
+  // Function to fetch recordings for a specific call
+  const fetchRecordings = async (transcript: any) => {
+    const callId = transcript._id;
+    if (recordings[callId] || loadingRecordings[callId]) {
+      return; // Already loaded or loading
+    }
+
+    setLoadingRecordings(prev => ({ ...prev, [callId]: true }));
+    
+    try {
+      // Log transcript data to see available fields
+      console.log('Transcript data:', transcript);
+      
+      // Try to find a Twilio call SID in the transcript
+      // Twilio call SIDs start with 'CA' and are 34 characters long
+      let twilioCallSid = null;
+      
+      // Check common field names that might contain the Twilio call SID
+      const possibleFields = ['call_sid', 'twilio_call_sid', 'sid', 'call_id', 'external_id', 'telephony_id'];
+      for (const field of possibleFields) {
+        if (transcript[field] && typeof transcript[field] === 'string' && transcript[field].startsWith('CA')) {
+          twilioCallSid = transcript[field];
+          break;
+        }
+      }
+      
+      if (!twilioCallSid) {
+        console.warn('No Twilio call SID found in transcript:', transcript);
+        setRecordings(prev => ({ ...prev, [callId]: [] }));
+        return;
+      }
+      
+      console.log('Using Twilio call SID:', twilioCallSid);
+      
+      const { data, error } = await supabase.functions.invoke('get-call-recordings', {
+        body: { call_sid: twilioCallSid }
+      });
+      
+      if (error) {
+        console.error('Error fetching recordings:', error);
+        return;
+      }
+      
+      setRecordings(prev => ({ ...prev, [callId]: data.recordings || [] }));
+    } catch (err) {
+      console.error('Failed to fetch recordings:', err);
+    } finally {
+      setLoadingRecordings(prev => ({ ...prev, [callId]: false }));
+    }
+  };
+
+  // Function to handle audio playback
+  const handleAudioPlay = (audioUrl: string, recordingSid: string) => {
+    const audio = audioRefs.current[recordingSid];
+    if (!audio) return;
+
+    if (playingAudio === audioUrl) {
+      audio.pause();
+      setPlayingAudio(null);
+    } else {
+      // Pause all other audios
+      Object.values(audioRefs.current).forEach(a => {
+        if (a && a !== audio) a.pause();
+      });
+      audio.play().catch(err => console.error('Playback failed:', err));
+      setPlayingAudio(audioUrl);
+    }
+  };
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -161,14 +235,88 @@ const UserAnalytics: React.FC = () => {
             <CardHeader>
               <CardTitle className="flex justify-between items-center">
                 <span>Call from {transcript.from_phone}</span>
-                <div className="text-sm text-gray-500">
+                <div className="text-sm text-gray-500 text-right">
                   <div>{toSydneyTime(transcript.start_time)}</div>
+                  {(transcript.agent_name || transcript.agent_email) && (
+                    <div className="mt-1 text-xs">
+                      {transcript.agent_email && (
+                        <div className="text-gray-600">
+                          <span className="font-medium">Email:</span> {transcript.agent_email}
+                        </div>
+                      )}
+                      {transcript.agent_name && (
+                        <div className="text-gray-600 mt-0.5">
+                          <span className="font-medium">Agent:</span> {transcript.agent_name}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardTitle>
               <div className="text-sm text-gray-600">
                 <p><strong>Duration:</strong> {transcript.duration} seconds</p>
                 <p><strong>Status:</strong> {transcript.status}</p>
                 <p><strong>Summary:</strong> {transcript.call_summary}</p>
+                
+                {/* Call Recordings Section */}
+                <div className="mt-4 border-t pt-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p><strong>Call Recording:</strong></p>
+                    <Button
+                       onClick={() => fetchRecordings(transcript)}
+                       disabled={loadingRecordings[transcript._id]}
+                       variant="outline"
+                       size="sm"
+                     >
+                       {loadingRecordings[transcript._id] ? 'Loading...' : 'Load Recording'}
+                     </Button>
+                  </div>
+                  
+                  {recordings[transcript._id] && recordings[transcript._id].length > 0 && (
+                    <div className="space-y-2">
+                      {recordings[transcript._id].map((recording: any, index: number) => (
+                        <div key={recording.sid} className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
+                          <Button
+                            onClick={() => handleAudioPlay(recording.media_url, recording.sid)}
+                            variant="ghost"
+                            size="sm"
+                            className="p-1"
+                          >
+                            {playingAudio === recording.media_url ? <Pause size={16} /> : <Play size={16} />}
+                          </Button>
+                          
+                          <div className="flex-1">
+                            <audio
+                              ref={(el) => { audioRefs.current[recording.sid] = el; }}
+                              src={recording.media_url}
+                              controls
+                              className="w-full h-8"
+                              onPlay={() => setPlayingAudio(recording.media_url)}
+                              onPause={() => setPlayingAudio(null)}
+                              onEnded={() => setPlayingAudio(null)}
+                            />
+                          </div>
+                          
+                          <a
+                            href={recording.download_url}
+                            download
+                            className="text-blue-500 hover:text-blue-700"
+                          >
+                            <Download size={16} />
+                          </a>
+                          
+                          <span className="text-xs text-gray-500">
+                            {recording.duration}s
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {recordings[transcript._id] && recordings[transcript._id].length === 0 && (
+                    <p className="text-gray-500 text-sm">No recordings found for this call.</p>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>

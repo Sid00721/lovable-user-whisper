@@ -26,18 +26,6 @@ const App = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <LoginForm onLogin={login} />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -45,9 +33,19 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index onLogout={logout} />} />
-            <Route path="/payments" element={<PaymentAnalytics onBack={() => window.history.back()} />} />
+            {/* Public routes */}
             <Route path="/analytics" element={<UserAnalytics />} />
+            
+            {/* Protected routes */}
+            {isAuthenticated ? (
+              <>
+                <Route path="/" element={<Index onLogout={logout} />} />
+                <Route path="/payments" element={<PaymentAnalytics onBack={() => window.history.back()} />} />
+              </>
+            ) : (
+              <Route path="/" element={<LoginForm onLogin={login} />} />
+            )}
+            
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
