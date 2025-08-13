@@ -157,7 +157,8 @@ const Index = ({ onLogout }: IndexProps) => {
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.company?.toLowerCase().includes(searchTerm.toLowerCase());
+                         user.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.phone?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesPriority = priorityFilter === "all" || user.priority === priorityFilter;
     const matchesAssigned = assignedFilter === "all" || user.assignedTo === assignedFilter;
@@ -498,7 +499,7 @@ const Index = ({ onLogout }: IndexProps) => {
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground/60" />
                   <Input
-                    placeholder="Search users..."
+                    placeholder="Search users by name, email, phone..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"

@@ -31,12 +31,16 @@ Deno.serve(async (req) => {
     const page = body.page || 1;
     const limit = body.limit || 10;
     const skip = (page - 1) * limit;
+    const search = body.search || '';
+    const date = body.date || 'all';
+    const sentiment = body.sentiment || 'all';
+    const tag = body.tag || 'all';
 
     const db = client.db("db");
     const calls = db.collection("calls");
     const agents = db.collection("agents");
 
-    let query: Record<string, unknown> = {};
+    let query: Record<string, any> = {};
 
     // If userEmail is provided, filter by that user's agent
     if (userEmail) {
@@ -60,7 +64,34 @@ Deno.serve(async (req) => {
           status: 200,
         });
       }
-      query = { agent_id: agent._id };
+      query.agent_id = agent._id;
+    }
+
+    // Search filter
+    if (search) {
+      query.call_summary = { $regex: search, $options: 'i' };
+    }
+
+    // Date filter
+    if (date !== 'all') {
+      const now = new Date();
+      let startDate = new Date();
+      if (date === 'last_week') {
+        startDate.setDate(now.getDate() - 7);
+      } else if (date === 'last_month') {
+        startDate.setMonth(now.getMonth() - 1);
+      }
+      query.start_time = { $gte: startDate.toISOString() };
+    }
+
+    // Sentiment filter (assuming sentiment field exists)
+    if (sentiment !== 'all') {
+      query.sentiment = sentiment;
+    }
+
+    // Tag filter (assuming tags array exists)
+    if (tag !== 'all') {
+      query.tags = { $in: [tag] };
     }
 
     // Get total count for pagination

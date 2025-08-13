@@ -5,6 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Download } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import OpenAI from 'openai';
 
 // Helper function to convert UTC time to Sydney time
 const toSydneyTime = (utcTime: string | number) => {
@@ -38,6 +42,14 @@ const UserAnalytics: React.FC = () => {
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const audioRefs = useRef<{[key: string]: HTMLAudioElement | null}>({});
   const ITEMS_PER_PAGE = 10;
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [sentimentFilter, setSentimentFilter] = useState('all');
+  const [tagFilter, setTagFilter] = useState('all');
+  const [aiInsights, setAiInsights] = useState<{[key: string]: {summary: string; takeaways: string[]; sentiment: string}}>({});
+  const [loadingInsights, setLoadingInsights] = useState<{[key: string]: boolean}>({});
+  const [activeTranscript, setActiveTranscript] = useState<string | null>(null);
+  const [activeMessageIndex, setActiveMessageIndex] = useState<number>(-1);
 
   // Function to fetch recordings for a specific call
   const fetchRecordings = async (transcript: any) => {
@@ -91,13 +103,15 @@ const UserAnalytics: React.FC = () => {
   };
 
   // Function to handle audio playback
-  const handleAudioPlay = (audioUrl: string, recordingSid: string) => {
+  const handleAudioPlay = (audioUrl: string, recordingSid: string, transcriptId: string) => {
     const audio = audioRefs.current[recordingSid];
     if (!audio) return;
 
     if (playingAudio === audioUrl) {
       audio.pause();
       setPlayingAudio(null);
+      setActiveTranscript(null);
+      setActiveMessageIndex(-1);
     } else {
       // Pause all other audios
       Object.values(audioRefs.current).forEach(a => {
@@ -105,6 +119,55 @@ const UserAnalytics: React.FC = () => {
       });
       audio.play().catch(err => console.error('Playback failed:', err));
       setPlayingAudio(audioUrl);
+      setActiveTranscript(transcriptId);
+      setActiveMessageIndex(-1);
+    }
+
+    audio.ontimeupdate = () => {
+      const currentTime = audio.currentTime;
+      const currentTranscript = transcripts.find(t => t._id === transcriptId);
+      if (!currentTranscript) return;
+      const messages = currentTranscript.timestamps.filter((m: any) => m.event_type === 'message').sort((a: any, b: any) => a.timestamp - b.timestamp);
+      let activeIndex = -1;
+      for (let i = 0; i < messages.length; i++) {
+        const start = messages[i].timestamp;
+        const end = i < messages.length - 1 ? messages[i + 1].timestamp : Infinity;
+        if (currentTime >= start && currentTime < end) {
+          activeIndex = i;
+          break;
+        }
+      }
+      setActiveMessageIndex(activeIndex);
+    };
+
+    audio.onended = () => {
+      setPlayingAudio(null);
+      setActiveTranscript(null);
+      setActiveMessageIndex(-1);
+    };
+  };
+
+  const generateInsights = async (transcript: any) => {
+    const callId = transcript._id;
+    if (aiInsights[callId] || loadingInsights[callId]) return;
+    setLoadingInsights(prev => ({ ...prev, [callId]: true }));
+    try {
+      const openai = new OpenAI({ apiKey: process.env.REACT_APP_OPENAI_API_KEY, dangerouslyAllowBrowser: true });
+      const messages = transcript.timestamps.filter((msg: any) => msg.event_type === 'message').map((msg: any) => msg.text).join('\n');
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: `Generate summary, key takeaways, and sentiment (positive/negative/neutral) for this transcript: ${messages}` }],
+      });
+      const content = response.choices[0].message.content;
+      const [summaryLine, takeawaysLine, sentimentLine] = content.split('\n');
+      const summary = summaryLine.replace('Summary: ', '');
+      const takeaways = takeawaysLine.replace('Takeaways: ', '').split('; ');
+      const sentiment = sentimentLine.replace('Sentiment: ', '');
+      setAiInsights(prev => ({ ...prev, [callId]: { summary, takeaways, sentiment } }));
+    } catch (err) {
+      console.error('Failed to generate insights:', err);
+    } finally {
+      setLoadingInsights(prev => ({ ...prev, [callId]: false }));
     }
   };
 
@@ -138,7 +201,11 @@ const UserAnalytics: React.FC = () => {
         const requestBody = {
           page: currentPage,
           limit: ITEMS_PER_PAGE,
-          ...(selectedUser !== 'all' && { userEmail: selectedUser })
+          ...(selectedUser !== 'all' && { userEmail: selectedUser }),
+          search: searchQuery,
+          date: dateFilter,
+          sentiment: sentimentFilter,
+          tag: tagFilter
         };
         console.log('Attempting to fetch transcripts with filter:', requestBody);
         
@@ -164,7 +231,7 @@ const UserAnalytics: React.FC = () => {
     };
 
     fetchTranscripts();
-  }, [selectedUser, currentPage]);
+  }, [selectedUser, currentPage, searchQuery, dateFilter, sentimentFilter, tagFilter]);
 
   const handleNextPage = () => {
     if (hasNextPage) {
@@ -217,6 +284,40 @@ const UserAnalytics: React.FC = () => {
         </div>
       </div>
       
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <Input
+          placeholder="Search transcripts..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1"
+        />
+        <Select value={dateFilter} onValueChange={setDateFilter}>
+          <SelectTrigger className="w-full md:w-40"><SelectValue placeholder="Date Filter" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Dates</SelectItem>
+            <SelectItem value="last_week">Last Week</SelectItem>
+            <SelectItem value="last_month">Last Month</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
+          <SelectTrigger className="w-full md:w-40"><SelectValue placeholder="Sentiment" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Sentiments</SelectItem>
+            <SelectItem value="positive">Positive</SelectItem>
+            <SelectItem value="negative">Negative</SelectItem>
+            <SelectItem value="neutral">Neutral</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={tagFilter} onValueChange={setTagFilter}>
+          <SelectTrigger className="w-full md:w-40"><SelectValue placeholder="Tags" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Tags</SelectItem>
+            <SelectItem value="sales">Sales Call</SelectItem>
+            <SelectItem value="support">Support</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      
       {/* Pagination Info */}
       {totalCount > 0 && (
         <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
@@ -263,13 +364,13 @@ const UserAnalytics: React.FC = () => {
                   <div className="flex items-center justify-between mb-2">
                     <p><strong>Call Recording:</strong></p>
                     <Button
-                       onClick={() => fetchRecordings(transcript)}
-                       disabled={loadingRecordings[transcript._id]}
-                       variant="outline"
-                       size="sm"
-                     >
-                       {loadingRecordings[transcript._id] ? 'Loading...' : 'Load Recording'}
-                     </Button>
+                      onClick={() => fetchRecordings(transcript)}
+                      disabled={loadingRecordings[transcript._id]}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {loadingRecordings[transcript._id] ? 'Loading...' : 'Load Recording'}
+                    </Button>
                   </div>
                   
                   {recordings[transcript._id] && recordings[transcript._id].length > 0 && (
@@ -277,7 +378,7 @@ const UserAnalytics: React.FC = () => {
                       {recordings[transcript._id].map((recording: any, index: number) => (
                         <div key={recording.sid} className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
                           <Button
-                            onClick={() => handleAudioPlay(recording.media_url, recording.sid)}
+                            onClick={() => handleAudioPlay(recording.media_url, recording.sid, transcript._id)}
                             variant="ghost"
                             size="sm"
                             className="p-1"
@@ -317,38 +418,67 @@ const UserAnalytics: React.FC = () => {
                     <p className="text-gray-500 text-sm">No recordings found for this call.</p>
                   )}
                 </div>
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" onClick={() => generateInsights(transcript)} disabled={loadingInsights[transcript._id]} className="mt-4">
+                      {loadingInsights[transcript._id] ? 'Generating...' : 'Generate AI Insights'}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    {aiInsights[transcript._id] && (
+                      <div className="mt-2 p-3 bg-gray-50 rounded">
+                        <p><strong>Summary:</strong> {aiInsights[transcript._id].summary}</p>
+                        <p><strong>Key Takeaways:</strong></p>
+                        <ul>{aiInsights[transcript._id].takeaways.map((t, i) => <li key={i}>- {t}</li>)}</ul>
+                        <p><strong>Sentiment:</strong> <Badge variant={aiInsights[transcript._id].sentiment === 'positive' ? 'success' : aiInsights[transcript._id].sentiment === 'negative' ? 'destructive' : 'default'}>{aiInsights[transcript._id].sentiment}</Badge></p>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {transcript.timestamps && transcript.timestamps
                   .filter((msg: any) => msg.event_type === 'message')
-                  .map((message: any, index: number) => (
-                    <div
-                      key={index}
-                      className={`flex ${
-                        message.message_type === 'human' ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
+                  .map((message: any, index: number) => {
+                    const recordingSid = recordings[transcript._id]?.[0]?.sid || '';
+                    return (
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          message.message_type === 'human'
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-200 text-gray-800'
+                        key={index}
+                        className={`flex ${
+                          message.message_type === 'human' ? 'justify-end' : 'justify-start'
                         }`}
                       >
-                        <div className="text-sm">
-                          <strong>
-                            {message.message_type === 'human' ? 'Caller' : 'AI Assistant'}
-                          </strong>
-                        </div>
-                        <div>{message.text}</div>
-                        <div className="text-xs opacity-75 mt-1">
-                          {toSydneyTime(message.timestamp * 1000)}
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                            message.message_type === 'human'
+                              ? 'bg-blue-500 text-white'
+                              : 'bg-gray-200 text-gray-800'
+                          } ${transcript._id === activeTranscript && index === activeMessageIndex ? 'bg-yellow-100' : ''}`}
+                        >
+                          <div className="text-sm">
+                            <strong>
+                              {message.message_type === 'human' ? 'Caller' : 'AI Assistant'}
+                            </strong>
+                          </div>
+                          <div>{message.text}</div>
+                          <div
+                            className="text-xs opacity-75 mt-1 cursor-pointer"
+                            onClick={() => {
+                              const audio = audioRefs.current[recordingSid];
+                              if (audio && recordingSid) {
+                                audio.currentTime = message.timestamp;
+                                if (audio.paused) audio.play();
+                              }
+                            }}
+                          >
+                            {toSydneyTime(message.timestamp * 1000)}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>
