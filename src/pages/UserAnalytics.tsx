@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -245,26 +246,39 @@ const UserAnalytics: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    // Add logout logic here if needed
+    window.location.href = '/';
+  };
+
   if (loading) {
     return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold">User Analytics</h1>
-        <p>Loading transcripts...</p>
-      </div>
+      <>
+        <Header onLogout={handleLogout} showAnalyticsButton={true} />
+        <div className="p-4">
+          <h1 className="text-2xl font-bold">User Analytics</h1>
+          <p>Loading transcripts...</p>
+        </div>
+      </>
     );
   }
 
   if (error) {
     return (
-      <div className="p-4">
-        <h1 className="text-2xl font-bold">User Analytics</h1>
-        <p className="text-red-500">{error}</p>
-      </div>
+      <>
+        <Header onLogout={handleLogout} showAnalyticsButton={true} />
+        <div className="p-4">
+          <h1 className="text-2xl font-bold">User Analytics</h1>
+          <p className="text-red-500">{error}</p>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
+    <>
+      <Header onLogout={handleLogout} showAnalyticsButton={true} />
+      <div className="p-4 max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Platform Call Transcripts</h1>
         <div className="w-64">
@@ -537,7 +551,8 @@ const UserAnalytics: React.FC = () => {
           </Button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

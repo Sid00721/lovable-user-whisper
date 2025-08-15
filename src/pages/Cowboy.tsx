@@ -3,24 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Brain, FileText, LineChart, Search, Sparkles, Loader2, Copy, CheckCircle, Save, History, Trash2, ChevronDown, ChevronRight } from "lucide-react";
+import { ArrowRight, Brain, FileText, LineChart, Search, Sparkles, Loader2, Copy, CheckCircle, Save, History, Trash2, ChevronDown, ChevronRight, Home, Building, User, Users, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { Header } from "@/components/Header";
 import OpenAI from "openai";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // API key from environment variables
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
@@ -71,17 +62,13 @@ Your roles include:
 ## Information to Collect
 For this business, collect: [DATA_FIELDS]
 
-## Pricing Information
-Personal: $1/day for personal assistant
-Business: Custom pricing available on [WEBSITE]
-
 ## Edge Cases
 - If asked about the agent: "The team at [BUSINESS_NAME] developed my capabilities. If you'd like, I will let them know you wanted to know more."
 - If request is irrelevant to identities: ask them to select an identity.
 - If asked how [BUSINESS_NAME] works: "[BUSINESS_NAME] builds real-time conversational AI for phone calls. Our AI agents can handle complex enquiries and respond with a custom knowledge base. We serve individuals and businesses."
 - If asked about [BUSINESS_NAME]'s product: "We serve both individuals and businesses. Busy professionals use [BUSINESS_NAME] for Professionals to help them answer missed calls. Businesses use us to handle inbound enquiries. Customer service agents use us to focus on what they do best."
 - If asked for private info: refuse and explain privacy policy.
-- If asked for pricing: "For one dollar a day, you can have your own AI phone answering agent. For business use cases with a custom knowledge base and additional requirements, let's chat!"
+
 
 ## Task
 Follow this multi-step call flow:
@@ -325,120 +312,166 @@ export default function Cowboy() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-background">
+      <Header onLogout={() => {}} showAnalyticsButton={true} />
+      <div className="container mx-auto px-6 py-8 max-w-7xl">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3">
-            <Brain className="h-12 w-12 text-purple-600" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              Voqo AI Prompt Engineer
+        <div className="mb-8">
+          <div className="space-y-1 mb-6">
+            <h1 className="text-3xl font-semibold">
+              Voqo AI Prompt Generator
             </h1>
+            <p className="text-muted-foreground">
+              Generate professional system prompts for Voqo AI agents in seconds
+            </p>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Transform your business description into a production-ready Voqo AI system prompt
-          </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Input Section */}
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-purple-600" />
-                Business Description
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {/* Quick Start Templates */}
+        <Card className="mb-8 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium">Quick Start Templates</CardTitle>
+            <p className="text-sm text-muted-foreground">Choose a template to get started quickly</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 h-auto p-4 flex-col shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                onClick={() => setBusinessDescription("Real estate agent handling property inquiries and scheduling viewings")}
+              >
+                <Home className="h-5 w-5 text-primary" />
+                <span className="text-sm">Real Estate</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 h-auto p-4 flex-col shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                onClick={() => setBusinessDescription("Property management company handling tenant requests and maintenance scheduling")}
+              >
+                <Building className="h-5 w-5 text-primary" />
+                <span className="text-sm">Property Manager</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 h-auto p-4 flex-col shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                onClick={() => setBusinessDescription("Buyer's agent helping clients find and purchase properties")}
+              >
+                <User className="h-5 w-5 text-primary" />
+                <span className="text-sm">Buyers Agent</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 h-auto p-4 flex-col shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                onClick={() => setBusinessDescription("Real estate agency coordinating multiple agents and client services")}
+              >
+                <Users className="h-5 w-5 text-primary" />
+                <span className="text-sm">Agency</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex items-center gap-2 h-auto p-4 flex-col shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                onClick={() => setBusinessDescription("Construction company handling project inquiries and scheduling consultations")}
+              >
+                <Wrench className="h-5 w-5 text-primary" />
+                <span className="text-sm">Construction</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Input Section */}
+        <Card className="mb-8 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              Business Description
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">Describe your business and what you need the AI agent to handle</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
               <Textarea
-                placeholder="Describe your business and phone answering needs in plain English...\n\nExample: We're a dental practice in downtown Seattle. We need an AI agent to handle appointment bookings, answer questions about our services, and collect patient information. We offer general dentistry, cosmetic procedures, and emergency care."
+                placeholder="e.g., Real estate agent handling property inquiries, scheduling viewings, and qualifying leads..."
                 value={businessDescription}
                 onChange={(e) => setBusinessDescription(e.target.value)}
-                className="min-h-[200px] resize-none border-purple-200 focus:border-purple-400"
+                className="min-h-[120px] resize-none"
               />
-              
-              <Button 
-                onClick={generatePrompt}
-                disabled={isGenerating || !businessDescription.trim()}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Prompt...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Voqo AI Prompt
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+              <div className="flex justify-end">
+                <Button
+                  onClick={generatePrompt}
+                  disabled={!businessDescription.trim() || isGenerating}
+                  className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="h-4 w-4 mr-2" />
+                      Generate Prompt
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Output Section */}
-          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        {/* Generated Prompt Section */}
+        {generatedPrompt && (
+          <Card className="mb-8 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Brain className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg font-medium flex items-center gap-2">
+                <Brain className="h-5 w-5 text-primary" />
                 Generated System Prompt
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {generatedPrompt ? (
-                <>
-                  <Textarea
-                    value={generatedPrompt}
-                    readOnly
-                    className="min-h-[200px] resize-none border-blue-200 bg-blue-50/50"
-                  />
-                  
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => copyToClipboard(generatedPrompt)}
-                      variant="outline"
-                      className="flex-1 border-blue-200 hover:bg-blue-50"
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy Prompt
-                    </Button>
-                    
-                    <Button
-                      onClick={() => setShowSaveDialog(true)}
-                      variant="outline"
-                      className="flex-1 border-green-200 hover:bg-green-50"
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      Save Prompt
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="min-h-[200px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 rounded-lg">
-                  <div className="text-center space-y-2">
-                    <Brain className="h-12 w-12 mx-auto text-gray-400" />
-                    <p>Your generated prompt will appear here</p>
-                  </div>
-                </div>
-              )}
+              <Textarea
+                value={generatedPrompt}
+                readOnly
+                className="min-h-[300px] resize-none font-mono text-sm"
+              />
+              
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => copyToClipboard(generatedPrompt)}
+                  variant="outline"
+                  className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy Prompt
+                </Button>
+                
+                <Button
+                  onClick={() => setShowSaveDialog(true)}
+                  variant="outline"
+                  className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Prompt
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
 
         {/* Saved Prompts Section */}
-        <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+        <Card className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5 text-green-600" />
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <Save className="h-5 w-5 text-primary" />
               Saved Prompts ({savedPrompts.length})
             </CardTitle>
+            <p className="text-sm text-muted-foreground">Your previously generated and saved prompts</p>
           </CardHeader>
           <CardContent>
             {savedPrompts.length > 0 ? (
               <div className="space-y-4">
                 {savedPrompts.map((prompt) => (
-                  <Card key={prompt.id} className="border border-gray-200">
+                  <Card key={prompt.id} className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] hover:shadow-lg transition-all duration-200">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-lg">{prompt.name}</h3>
@@ -450,15 +483,15 @@ export default function Cowboy() {
                             onClick={() => loadPrompt(prompt)}
                             size="sm"
                             variant="outline"
-                            className="border-blue-200 hover:bg-blue-50"
+                            className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
                           >
-                            <ArrowRight className="h-4 w-4" />
+                            <FileText className="h-4 w-4" />
                           </Button>
                           <Button
                             onClick={() => deletePrompt(prompt.id)}
                             size="sm"
                             variant="outline"
-                            className="border-red-200 hover:bg-red-50 text-red-600"
+                            className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -468,7 +501,7 @@ export default function Cowboy() {
                       <Collapsible>
                         <CollapsibleTrigger
                           onClick={() => togglePromptExpansion(prompt.id)}
-                          className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800"
+                          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {expandedPrompts.has(prompt.id) ? (
                             <ChevronDown className="h-4 w-4" />
@@ -479,15 +512,15 @@ export default function Cowboy() {
                         </CollapsibleTrigger>
                         <CollapsibleContent className="mt-3 space-y-3">
                           <div>
-                            <h4 className="font-medium text-sm text-gray-700 mb-1">Business Description:</h4>
-                            <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                            <h4 className="font-medium text-sm mb-1">Business Description:</h4>
+                            <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
                               {prompt.business_description}
                             </p>
                           </div>
                           <div>
-                            <h4 className="font-medium text-sm text-gray-700 mb-1">Generated Prompt:</h4>
-                            <div className="bg-gray-50 p-2 rounded">
-                              <pre className="text-xs text-gray-600 whitespace-pre-wrap font-mono">
+                            <h4 className="font-medium text-sm mb-1">Generated Prompt:</h4>
+                            <div className="bg-muted p-3 rounded-md">
+                              <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
                                 {prompt.generated_prompt.substring(0, 200)}...
                               </pre>
                               <Button

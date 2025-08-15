@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import { PaymentAnalytics } from "./pages/PaymentAnalytics";
 import UserAnalytics from "./pages/UserAnalytics";
+import Cowboy from "./pages/Cowboy";
 import { LoginForm } from "./components/LoginForm";
 import { useAuth } from "./hooks/useAuth";
 import NotFound from "./pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => {
           <Routes>
             {/* Public routes */}
             <Route path="/analytics" element={<UserAnalytics />} />
+            <Route path="/cowboy" element={<Cowboy />} />
             
             {/* Protected routes */}
             {isAuthenticated ? (
