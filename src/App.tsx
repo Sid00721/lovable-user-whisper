@@ -7,9 +7,14 @@ import Index from "./pages/Index";
 import { PaymentAnalytics } from "./pages/PaymentAnalytics";
 import UserAnalytics from "./pages/UserAnalytics";
 import Cowboy from "./pages/Cowboy";
+import HighPriorityView from "./pages/HighPriorityView";
+import ActiveUsersView from "./pages/ActiveUsersView";
+import ContactNeededView from "./pages/ContactNeededView";
 import { LoginForm } from "./components/LoginForm";
 import { useAuth } from "./hooks/useAuth";
 import NotFound from "./pages/NotFound";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { ViewDensityProvider } from "./contexts/ViewDensityContext";
 
 const queryClient = new QueryClient();
 
@@ -29,10 +34,12 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <ThemeProvider>
+        <ViewDensityProvider>
+          <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <Routes>
             {/* Public routes */}
             <Route path="/analytics" element={<UserAnalytics />} />
@@ -43,6 +50,9 @@ const App = () => {
               <>
                 <Route path="/" element={<Index onLogout={logout} />} />
                 <Route path="/payments" element={<PaymentAnalytics onBack={() => window.history.back()} />} />
+                <Route path="/dashboard/high-priority" element={<HighPriorityView />} />
+                <Route path="/dashboard/active-users" element={<ActiveUsersView />} />
+                <Route path="/dashboard/contact-needed" element={<ContactNeededView />} />
               </>
             ) : (
               <Route path="/" element={<LoginForm onLogin={login} />} />
@@ -51,8 +61,10 @@ const App = () => {
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+          </BrowserRouter>
+          </TooltipProvider>
+        </ViewDensityProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 };

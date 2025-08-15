@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { LogOut, BarChart3, Users, Brain } from "lucide-react";
-
+import { LogOut, BarChart3, Users, Brain, Search } from "lucide-react";
+import { SearchModal } from "./SearchModal";
+import { useGlobalSearch } from "@/hooks/useGlobalSearch";
 import { Link } from "react-router-dom";
+import ThemeToggle from "./ThemeToggle";
+import ViewDensityToggle from "./ViewDensityToggle";
 
 interface HeaderProps {
   onLogout: () => void;
@@ -9,6 +12,7 @@ interface HeaderProps {
 }
 
 export function Header({ onLogout, showAnalyticsButton }: HeaderProps) {
+  const { isSearchOpen, openSearch, closeSearch } = useGlobalSearch();
   return (
     <header className="border-b bg-background sticky top-0 z-50">
       <div className="container mx-auto px-6 py-4 max-w-7xl">
@@ -29,6 +33,21 @@ export function Header({ onLogout, showAnalyticsButton }: HeaderProps) {
           </Link>
           
           <div className="flex items-center space-x-4">
+            <Button 
+              variant="outline"
+              onClick={openSearch}
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] min-w-[200px] justify-start text-muted-foreground"
+            >
+              <Search className="h-4 w-4 mr-2" />
+              <span className="flex-1 text-left">Search...</span>
+              <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </Button>
+            
+            <ViewDensityToggle />
+            <ThemeToggle />
+            
             {showAnalyticsButton && (
               <>
                 <Link to="/analytics">
@@ -71,6 +90,8 @@ export function Header({ onLogout, showAnalyticsButton }: HeaderProps) {
           </div>
         </div>
       </div>
+      
+      <SearchModal isOpen={isSearchOpen} onClose={closeSearch} />
     </header>
   );
 }

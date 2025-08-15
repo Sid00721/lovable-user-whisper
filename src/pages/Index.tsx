@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { User, Employee } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
@@ -13,6 +13,12 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Plus, Search, Users, TrendingUp, Clock, CreditCard, DollarSign, AlertTriangle, Zap, BarChart3, RefreshCw, UserCheck } from "lucide-react";
 import { MetricCard } from "@/components/MetricsCards";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
+import { useViewDensity } from "@/contexts/ViewDensityContext";
+import { FilterPresetsProvider } from "../contexts/FilterPresetsContext";
+import { FilterPresetsManager } from "@/components/FilterPresetsManager";
+
+import { useAppStore, useUsers, useEmployees, useFilters, useFilteredUsers, useUIState } from "@/store/useAppStore";
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -31,8 +37,47 @@ interface IndexProps {
 
 const Index = ({ onLogout }: IndexProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { density } = useViewDensity();
+  const isCompact = density === 'compact';
+  
+  // Zustand store hooks
+  const users = useUsers();
+  const employees = useEmployees();
+  const filters = useFilters();
+  const filteredUsers = useFilteredUsers();
+  const uiState = useUIState();
+  
+  // Store actions
+  const { 
+    setUsers, 
+    setEmployees, 
+    addUser, 
+    updateUser, 
+    deleteUser,
+    setFilters,
+    setShowUserForm,
+    setEditingUser,
+    setShowPaymentAnalytics,
+    setShowMRR
+  } = useAppStore();
 
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  // Handle metric card clicks to navigate to filtered views
+  const handleMetricClick = (metricType: string) => {
+    switch (metricType) {
+      case 'high-priority':
+        navigate('/dashboard/high-priority');
+        break;
+      case 'using-platform':
+        navigate('/dashboard/active-users');
+        break;
+      case 'needs-contact':
+        navigate('/dashboard/contact-needed');
+        break;
+      default:
+        break;
+    }
+  };
 
   // Fetch employees from database
   useEffect(() => {
@@ -55,9 +100,7 @@ const Index = ({ onLogout }: IndexProps) => {
       }
     };
     fetchEmployees();
-  }, []);
-
-  const [users, setUsers] = useState<User[]>([]);
+  }, [setEmployees, toast]);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -117,18 +160,21 @@ const Index = ({ onLogout }: IndexProps) => {
       }
     };
     fetchUsers();
-  }, [employees]);
+  }, [employees, setUsers, toast]);
 
+  // Handle filter changes from FilterPresetsManager
+  const handleFiltersChange = (newFilters: any) => {
+    setFilters({
+      searchTerm: newFilters.searchTerm || '',
+      priorityFilter: newFilters.priorityFilter || 'all',
+      assignedFilter: newFilters.assignedFilter || 'all',
+      subscriptionFilter: newFilters.subscriptionFilter || 'all',
+      usingPlatformFilter: newFilters.usingPlatformFilter || 'all'
+    });
+  };
 
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [assignedFilter, setAssignedFilter] = useState<string>("all");
-  const [subscriptionFilter, setSubscriptionFilter] = useState<string>("all");
-  const [showUserForm, setShowUserForm] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | undefined>();
-  const [showPaymentAnalytics, setShowPaymentAnalytics] = useState(false);
-  const [showMRR, setShowMRR] = useState(false);
+  // Current filters object for FilterPresetsManager
+  const currentFilters = filters;
 
 
   const getPlanName = (planId: string | undefined) => {
@@ -147,27 +193,7 @@ const Index = ({ onLogout }: IndexProps) => {
 
 
 
-  // Filter users based on search and filters
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.phone?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesPriority = priorityFilter === "all" || user.priority === priorityFilter;
-    const matchesAssigned = assignedFilter === "all" || user.assignedTo === assignedFilter;
-    const matchesSubscription = subscriptionFilter === "all" || 
-                               (subscriptionFilter === "active" && user.subscriptionStatus === "active") ||
-                               (subscriptionFilter === "trialing" && user.subscriptionStatus === "trialing") ||
-                               (subscriptionFilter === "past_due" && user.subscriptionStatus === "past_due") ||
-                               (subscriptionFilter === "canceled" && user.subscriptionStatus === "canceled") ||
-                               (subscriptionFilter === "no_subscription" && !user.stripeCustomerId) ||
-                               (subscriptionFilter === "free" && user.subscriptionPlan === "free") ||
-                               (subscriptionFilter === "starter" && user.subscriptionPlan === "starter") ||
-                               (subscriptionFilter === "professional" && user.subscriptionPlan === "professional");
-    
-    return matchesSearch && matchesPriority && matchesAssigned && matchesSubscription;
-  });
+  // filteredUsers is now provided by the store's useFilteredUsers hook
 
   const handleAddUser = async (userData: Partial<User>) => {
     try {
@@ -200,33 +226,31 @@ const Index = ({ onLogout }: IndexProps) => {
 
       if (error) throw error;
 
-      // Refresh the users list
-      const { data: allUsers, error: fetchError } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
-      if (fetchError) throw fetchError;
+      // Create new user object and add to store
+      const newUser: User = {
+        id: data.id?.toString() ?? '',
+        name: userData.name ?? '',
+        email: userData.email ?? '',
+        phone: userData.phone ?? '',
+        company: userData.company ?? '',
+        priority: userData.priority ?? 'normal',
+        usingPlatform: userData.usingPlatform ?? false,
+        assignedTo: userData.assignedTo ?? 'unassigned',
+        referredBy: userData.referredBy ?? '',
+        lastContact: userData.lastContact ?? '',
+        notes: userData.notes ?? '',
+        isUpsellOpportunity: userData.isUpsellOpportunity ?? false,
+        commissionApproved: userData.commissionApproved ?? false,
+        createdAt: data.created_at ?? '',
+        stripeCustomerId: userData.stripeCustomerId ?? '',
+        subscriptionStatus: userData.subscriptionStatus ?? '',
+        subscriptionProduct: userData.subscriptionProduct ?? '',
+        subscriptionPlan: userData.subscriptionPlan ?? '',
+        lastPaymentDate: userData.lastPaymentDate ?? ''
+      };
       
-      if (allUsers) {
-        setUsers((allUsers as any[]).map((u) => ({
-          id: u.id?.toString() ?? '',
-          name: u.name ?? '',
-          email: u.email ?? '',
-          phone: u.phone ?? '',
-          company: u.company ?? '',
-          priority: u.priority === 'High' ? 'high' : 'normal',
-          usingPlatform: u.is_using_platform ?? false,
-          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? 'unassigned',
-          referredBy: u.referred_by ?? '',
-          lastContact: u.last_contact ?? '',
-          notes: u.notes ?? '',
-          isUpsellOpportunity: u.is_upsell_opportunity ?? false,
-          commissionApproved: u.commission_approved ?? false,
-          createdAt: u.created_at ?? '',
-          stripeCustomerId: u.stripe_customer_id ?? '',
-          subscriptionStatus: u.subscription_status ?? '',
-          subscriptionProduct: u.subscription_product ?? '',
-          subscriptionPlan: getPlanName(u.subscription_plan) ?? '',
-          lastPaymentDate: u.last_payment_date ?? ''
-        })));
-      }
+      addUser(newUser);
+      setShowUserForm(false);
 
       toast({
         title: "User added successfully",
@@ -243,7 +267,7 @@ const Index = ({ onLogout }: IndexProps) => {
   };
 
   const handleEditUser = async (userData: Partial<User>) => {
-    if (!editingUser) return;
+    if (!uiState.editingUser) return;
     
     try {
       // Find the employee ID based on the name
@@ -273,40 +297,34 @@ const Index = ({ onLogout }: IndexProps) => {
           subscription_plan: userData.subscriptionPlan || '',
           last_payment_date: userData.lastPaymentDate || null
         })
-        .eq('id', editingUser.id);
+        .eq('id', uiState.editingUser.id);
 
       if (error) throw error;
 
-      // Refresh the users list
-      const { data: allUsers, error: fetchError } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
-      if (fetchError) throw fetchError;
+      // Create updated user object and update in store
+      const updatedUser: User = {
+        ...uiState.editingUser,
+        name: userData.name ?? uiState.editingUser.name,
+        email: userData.email ?? uiState.editingUser.email,
+        phone: userData.phone ?? uiState.editingUser.phone,
+        company: userData.company ?? uiState.editingUser.company,
+        priority: userData.priority ?? uiState.editingUser.priority,
+        usingPlatform: userData.usingPlatform ?? uiState.editingUser.usingPlatform,
+        assignedTo: userData.assignedTo ?? uiState.editingUser.assignedTo,
+        referredBy: userData.referredBy ?? uiState.editingUser.referredBy,
+        lastContact: userData.lastContact ?? uiState.editingUser.lastContact,
+        notes: userData.notes ?? uiState.editingUser.notes,
+        isUpsellOpportunity: userData.isUpsellOpportunity ?? uiState.editingUser.isUpsellOpportunity,
+        commissionApproved: userData.commissionApproved ?? uiState.editingUser.commissionApproved,
+        stripeCustomerId: userData.stripeCustomerId ?? uiState.editingUser.stripeCustomerId,
+        subscriptionStatus: userData.subscriptionStatus ?? uiState.editingUser.subscriptionStatus,
+        subscriptionProduct: userData.subscriptionProduct ?? uiState.editingUser.subscriptionProduct,
+        subscriptionPlan: userData.subscriptionPlan ?? uiState.editingUser.subscriptionPlan,
+        lastPaymentDate: userData.lastPaymentDate ?? uiState.editingUser.lastPaymentDate
+      };
       
-      if (allUsers) {
-        // Map the data properly, including finding employee names
-        setUsers((allUsers as any[]).map((u) => ({
-          id: u.id?.toString() ?? '',
-          name: u.name ?? '',
-          email: u.email ?? '',
-          phone: u.phone ?? '',
-          company: u.company ?? '',
-          priority: u.priority === 'High' ? 'high' : 'normal',
-          usingPlatform: u.is_using_platform ?? false,
-          assignedTo: employees.find(emp => emp.id === u.employee_id)?.name ?? 'unassigned',
-          referredBy: u.referred_by ?? '',
-          lastContact: u.last_contact ?? '',
-          notes: u.notes ?? '',
-          isUpsellOpportunity: u.is_upsell_opportunity ?? false,
-          commissionApproved: u.commission_approved ?? false,
-          createdAt: u.created_at ?? '',
-          stripeCustomerId: u.stripe_customer_id ?? '',
-          subscriptionStatus: u.subscription_status ?? '',
-          subscriptionProduct: u.subscription_product ?? '',
-          subscriptionPlan: getPlanName(u.subscription_plan) ?? '',
-          lastPaymentDate: u.last_payment_date ?? ''
-        })));
-      }
-
-      setEditingUser(undefined);
+      updateUser(updatedUser);
+      setEditingUser(null);
       toast({
         title: "User updated successfully",
         description: `${userData.name} has been updated`,
@@ -321,15 +339,13 @@ const Index = ({ onLogout }: IndexProps) => {
     }
   };
 
-
-
   const openEditForm = (user: User) => {
     setEditingUser(user);
     setShowUserForm(true);
   };
 
   const openAddForm = () => {
-    setEditingUser(undefined);
+    setEditingUser(null);
     setShowUserForm(true);
   };
 
@@ -351,13 +367,14 @@ const Index = ({ onLogout }: IndexProps) => {
   const pastDueCount = users.filter(u => u.subscriptionStatus === 'past_due').length;
 
   // Handle navigation
-  if (showPaymentAnalytics) {
+  if (uiState.showPaymentAnalytics) {
     return <PaymentAnalytics onBack={() => setShowPaymentAnalytics(false)} />;
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header onLogout={onLogout} showAnalyticsButton={true} />
+    <FilterPresetsProvider>
+      <div className="min-h-screen bg-background">
+        <Header onLogout={onLogout} showAnalyticsButton={true} />
       
       <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Navigation Buttons */}
@@ -395,6 +412,8 @@ const Index = ({ onLogout }: IndexProps) => {
               description="Users requiring attention"
               tooltip="Users marked as high priority who need immediate attention or follow-up"
               className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+              onClick={() => handleMetricClick('high-priority')}
+              isClickable={true}
             />
 
             <MetricCard
@@ -404,6 +423,8 @@ const Index = ({ onLogout }: IndexProps) => {
               description="Active platform users"
               tooltip="Users with calls in last 30 days - actively using the platform features"
               className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+              onClick={() => handleMetricClick('using-platform')}
+              isClickable={true}
             />
 
             <MetricCard
@@ -413,6 +434,8 @@ const Index = ({ onLogout }: IndexProps) => {
               description="Requires follow-up"
               tooltip="Users who haven't been contacted recently and may need follow-up communication"
               className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+              onClick={() => handleMetricClick('needs-contact')}
+              isClickable={true}
             />
           </div>
         </TooltipProvider>
@@ -429,13 +452,13 @@ const Index = ({ onLogout }: IndexProps) => {
               className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-green-200 bg-green-50/50"
             />
             
-            <div onClick={() => setShowMRR(!showMRR)} className="cursor-pointer">
+            <div onClick={() => setShowMRR(!uiState.showMRR)} className="cursor-pointer">
               <MetricCard
-                title={showMRR ? 'Monthly Recurring Revenue' : 'Paying Subscribers'}
-                value={showMRR ? `$${mrr}` : payingSubscribersCount}
+                title={uiState.showMRR ? 'Monthly Recurring Revenue' : 'Paying Subscribers'}
+                value={uiState.showMRR ? `$${mrr}` : payingSubscribersCount}
                 icon={<DollarSign className="h-5 w-5 text-blue-600" />}
-                description={showMRR ? `${starterCount} starter ($15) + ${professionalCount} pro ($50)` : 'Starter & Professional plans'}
-                tooltip={showMRR ? 'Total recurring revenue generated per month from all active subscriptions' : 'Click to toggle between subscriber count and monthly revenue view'}
+                description={uiState.showMRR ? `${starterCount} starter ($15) + ${professionalCount} pro ($50)` : 'Starter & Professional plans'}
+                tooltip={uiState.showMRR ? 'Total recurring revenue generated per month from all active subscriptions' : 'Click to toggle between subscriber count and monthly revenue view'}
                 className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 transition-colors"
               />
             </div>
@@ -460,25 +483,51 @@ const Index = ({ onLogout }: IndexProps) => {
           </div>
         </TooltipProvider>
 
-
+        {/* Recent Activity Dashboard - Hidden */}
+        {false ? (
+        <div className={`grid ${isCompact ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 lg:grid-cols-4'} gap-6 mb-8`}>
+          <div className={isCompact ? 'lg:col-span-2' : 'lg:col-span-3'}>
+            {/* This space can be used for additional dashboard widgets */}
+          </div>
+          <div className="lg:col-span-1">
+            <RecentActivity
+              recentUsers={users
+                .filter(user => user.lastContact)
+                .sort((a, b) => new Date(b.lastContact!).getTime() - new Date(a.lastContact!).getTime())
+                .slice(0, 10)
+              }
+              highPriorityUsers={users.filter(user => user.priority === 'high').slice(0, 10)}
+              activeUsers={users.filter(user => user.usingPlatform).slice(0, 10)}
+              className="h-fit"
+            />
+          </div>
+        </div>
+        ) : null}
 
         {/* Filters */}
         <Card className="mb-8 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
-          <CardContent className="p-4">
+          <CardContent className="p-4 space-y-4">
+            {/* Filter Presets Manager */}
+            <FilterPresetsManager 
+              currentFilters={currentFilters}
+              onFiltersChange={handleFiltersChange}
+            />
+            
+            {/* Filter Controls */}
             <div className="flex gap-6 flex-wrap">
               <div className="flex-1 min-w-64">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground/60" />
                   <Input
                     placeholder="Search users by name, email, phone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    value={filters.searchTerm}
+                    onChange={(e) => setFilters({ searchTerm: e.target.value })}
                     className="pl-10"
                   />
                 </div>
               </div>
               
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <Select value={filters.priorityFilter} onValueChange={(value) => setFilters({ priorityFilter: value })}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Filter by priority" />
                 </SelectTrigger>
@@ -489,7 +538,7 @@ const Index = ({ onLogout }: IndexProps) => {
                 </SelectContent>
               </Select>
 
-              <Select value={assignedFilter} onValueChange={setAssignedFilter}>
+              <Select value={filters.assignedFilter} onValueChange={(value) => setFilters({ assignedFilter: value })}>
                 <SelectTrigger className="w-56">
                   <SelectValue placeholder="Filter by team member" />
                 </SelectTrigger>
@@ -503,7 +552,7 @@ const Index = ({ onLogout }: IndexProps) => {
                 </SelectContent>
               </Select>
 
-              <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+              <Select value={filters.subscriptionFilter} onValueChange={(value) => setFilters({ subscriptionFilter: value })}>
                 <SelectTrigger className="w-56">
                   <SelectValue placeholder="Filter by subscription" />
                 </SelectTrigger>
@@ -519,12 +568,23 @@ const Index = ({ onLogout }: IndexProps) => {
                   <SelectItem value="professional">Professional</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select value={filters.usingPlatformFilter} onValueChange={(value) => setFilters({ usingPlatformFilter: value })}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Platform usage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  <SelectItem value="yes">✓ Using Platform</SelectItem>
+                  <SelectItem value="no">✗ Not Using Platform</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
 
         {/* Users Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+        <div className={`grid grid-cols-1 ${isCompact ? 'lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4' : 'lg:grid-cols-2 xl:grid-cols-3 gap-8'}`}>
           {filteredUsers.map((user) => (
             <UserCard
               onMarkUpsell={(user) => {
@@ -548,14 +608,15 @@ const Index = ({ onLogout }: IndexProps) => {
 
         {/* User Form Dialog */}
         <UserForm
-          open={showUserForm}
+          open={uiState.showUserForm}
           onOpenChange={setShowUserForm}
-          user={editingUser}
-          onSave={editingUser ? handleEditUser : handleAddUser}
+          user={uiState.editingUser}
+          onSave={uiState.editingUser ? handleEditUser : handleAddUser}
           employees={employees}
         />
       </main>
-    </div>
+      </div>
+    </FilterPresetsProvider>
   );
 };
 

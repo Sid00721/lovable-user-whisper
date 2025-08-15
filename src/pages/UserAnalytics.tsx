@@ -153,7 +153,13 @@ const UserAnalytics: React.FC = () => {
     if (aiInsights[callId] || loadingInsights[callId]) return;
     setLoadingInsights(prev => ({ ...prev, [callId]: true }));
     try {
-      const openai = new OpenAI({ apiKey: process.env.REACT_APP_OPENAI_API_KEY, dangerouslyAllowBrowser: true });
+      const apiKey = import.meta.env.VITE_OPENAI_API_KEY as string | undefined;
+      if (!apiKey) {
+        console.error('OpenAI API key missing: please set VITE_OPENAI_API_KEY in your environment.');
+        setLoadingInsights(prev => ({ ...prev, [callId]: false }));
+        return;
+      }
+      const openai = new OpenAI({ apiKey, dangerouslyAllowBrowser: true });
       const messages = transcript.timestamps.filter((msg: any) => msg.event_type === 'message').map((msg: any) => msg.text).join('\n');
       const response = await openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
