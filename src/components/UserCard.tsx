@@ -2,7 +2,7 @@ import { User } from "@/types/crm";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Mail, Phone, MessageSquare, UserPlus, HelpCircle, Star, CreditCard, Calendar } from "lucide-react";
+import { Edit, Mail, Phone, MessageSquare, UserPlus, HelpCircle, Star, CreditCard, Calendar, AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface UserCardProps {
@@ -13,9 +13,9 @@ interface UserCardProps {
 
 export function UserCard({ user, onEdit, onMarkUpsell }: UserCardProps) {
   const priorityBadge = user.priority === 'high' ? (
-    <Badge className="bg-high-priority text-high-priority-foreground">🔥 High Priority</Badge>
+    <Badge className="bg-high-priority text-high-priority-foreground"><AlertTriangle className="h-4 w-4 inline mr-1" /> High Priority</Badge>
   ) : (
-    <Badge variant="secondary">⭐ Normal</Badge>
+    <Badge variant="secondary"><Star className="h-4 w-4 inline mr-1" /> Normal</Badge>
   );
 
   const formatDate = (dateString?: string) => {

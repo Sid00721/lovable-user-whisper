@@ -136,6 +136,7 @@ const Index = ({ onLogout }: IndexProps) => {
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [showPaymentAnalytics, setShowPaymentAnalytics] = useState(false);
+  const [showMRR, setShowMRR] = useState(false);
 
   const getPlanName = (planId: string | undefined) => {
     if (!planId) return 'Unknown';
@@ -357,7 +358,10 @@ const Index = ({ onLogout }: IndexProps) => {
 
   // Subscription Stats
   const activeSubscriptionsCount = users.filter(u => u.subscriptionStatus === 'active').length;
-  const totalSubscribersCount = users.filter(u => u.stripeCustomerId || u.subscriptionPlan).length;
+  const payingSubscribersCount = users.filter(u => u.subscriptionPlan === 'starter' || u.subscriptionPlan === 'professional').length;
+  const starterCount = users.filter(u => u.subscriptionPlan === 'starter').length;
+  const professionalCount = users.filter(u => u.subscriptionPlan === 'professional').length;
+  const mrr = (starterCount * 15) + (professionalCount * 50);
   const freeUserCount = users.filter(u => u.subscriptionPlan === 'free' || (u.subscriptionProduct && u.subscriptionProduct.includes('Free Tier'))).length;
   const pastDueCount = users.filter(u => u.subscriptionStatus === 'past_due').length;
 
@@ -402,7 +406,7 @@ const Index = ({ onLogout }: IndexProps) => {
           <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">High Priority</CardTitle>
-              <Badge className="bg-high-priority text-high-priority-foreground">🔥</Badge>
+              <AlertTriangle className="h-4 w-4 text-high-priority" />
             </CardHeader>
             <CardContent className="p-0">
               <div className="text-2xl font-semibold">{highPriorityCount}</div>
@@ -440,20 +444,20 @@ const Index = ({ onLogout }: IndexProps) => {
             <CardContent className="p-0">
               <div className="text-2xl font-semibold text-green-700">{activeSubscriptionsCount}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {totalSubscribersCount > 0 ? `${Math.round((activeSubscriptionsCount / totalSubscribersCount) * 100)}% of subscribers` : 'No subscribers yet'}
+                {users.length > 0 ? `${Math.round((activeSubscriptionsCount / users.length) * 100)}% of total users` : 'No users yet'}
               </p>
             </CardContent>
           </Card>
           
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-blue-200 bg-blue-50/50">
+          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-100/50 transition-colors" onClick={() => setShowMRR(!showMRR)}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Subscribers</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">{showMRR ? 'Monthly Recurring Revenue' : 'Paying Subscribers'}</CardTitle>
               <DollarSign className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent className="p-0">
-              <div className="text-2xl font-semibold text-blue-700">{totalSubscribersCount}</div>
+              <div className="text-2xl font-semibold text-blue-700">{showMRR ? `$${mrr}` : payingSubscribersCount}</div>
               <p className="text-xs text-muted-foreground mt-1">
-                {users.length > 0 ? `${Math.round((totalSubscribersCount / users.length) * 100)}% of all users` : 'No users yet'}
+                {showMRR ? `${starterCount} starter ($15) + ${professionalCount} pro ($50)` : 'Starter & Professional plans'}
               </p>
             </CardContent>
           </Card>
@@ -513,8 +517,8 @@ const Index = ({ onLogout }: IndexProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="high">🔥 High Priority</SelectItem>
-                  <SelectItem value="normal">⭐ Normal</SelectItem>
+                  <SelectItem value="high"><AlertTriangle className="h-4 w-4 inline mr-1" /> High Priority</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -556,6 +560,10 @@ const Index = ({ onLogout }: IndexProps) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
           {filteredUsers.map((user) => (
             <UserCard
+              onMarkUpsell={(user) => {
+                // Handle marking user as upsell opportunity
+                handleEditUser({...user, isUpsellOpportunity: true});
+              }}
               key={user.id}
               user={user}
               onEdit={openEditForm}
