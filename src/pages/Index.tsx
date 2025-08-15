@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
-import { User, Affiliate, Employee } from "@/types/crm";
+import { User, Employee } from "@/types/crm";
 import { UserCard } from "@/components/UserCard";
 import { UserForm } from "@/components/UserForm";
-import { AffiliateTracker } from "@/components/AffiliateTracker";
 import { PaymentAnalytics } from "@/pages/PaymentAnalytics";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Users, TrendingUp, Clock, CreditCard, DollarSign, AlertTriangle, Zap, BarChart3 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Search, Users, TrendingUp, Clock, CreditCard, DollarSign, AlertTriangle, Zap, BarChart3, RefreshCw, UserCheck } from "lucide-react";
+import { MetricCard } from "@/components/MetricsCards";
 import { useToast } from "@/hooks/use-toast";
 
 import { createClient } from '@supabase/supabase-js';
@@ -118,16 +119,7 @@ const Index = ({ onLogout }: IndexProps) => {
     fetchUsers();
   }, [employees]);
 
-  const [affiliates, setAffiliates] = useState<Affiliate[]>([
-    {
-      id: "1",
-      referredBy: "Mike Johnson",
-      referredUser: "John Smith",
-      status: "pending",
-      amount: 50,
-      paid: false
-    }
-  ]);
+
 
   const [searchTerm, setSearchTerm] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
@@ -137,6 +129,7 @@ const Index = ({ onLogout }: IndexProps) => {
   const [editingUser, setEditingUser] = useState<User | undefined>();
   const [showPaymentAnalytics, setShowPaymentAnalytics] = useState(false);
   const [showMRR, setShowMRR] = useState(false);
+
 
   const getPlanName = (planId: string | undefined) => {
     if (!planId) return 'Unknown';
@@ -328,15 +321,7 @@ const Index = ({ onLogout }: IndexProps) => {
     }
   };
 
-  const handleMarkPaid = (affiliateId: string) => {
-    setAffiliates(affiliates.map(affiliate =>
-      affiliate.id === affiliateId ? { ...affiliate, paid: true } : affiliate
-    ));
-    toast({
-      title: "Commission marked as paid",
-      description: "Affiliate payment has been recorded",
-    });
-  };
+
 
   const openEditForm = (user: User) => {
     setEditingUser(user);
@@ -374,9 +359,9 @@ const Index = ({ onLogout }: IndexProps) => {
     <div className="min-h-screen bg-background">
       <Header onLogout={onLogout} showAnalyticsButton={true} />
       
-      <main className="container mx-auto px-6 py-8 max-w-7xl">
+      <main className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Navigation Buttons */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-6">
           <Button 
             onClick={() => setShowPaymentAnalytics(true)} 
             variant="outline" 
@@ -392,108 +377,90 @@ const Index = ({ onLogout }: IndexProps) => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold">{users.length}</div>
-            </CardContent>
-          </Card>
-          
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">High Priority</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-high-priority" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold">{highPriorityCount}</div>
-            </CardContent>
-          </Card>
+        <TooltipProvider delayDuration={100}>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <MetricCard
+              title="Total Users"
+              value={users.length}
+              icon={<Users className="h-5 w-5 text-primary" />}
+              description="All registered users"
+              tooltip="Total number of users registered in the system, including both active and inactive accounts"
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+            />
+            
+            <MetricCard
+              title="High Priority"
+              value={highPriorityCount}
+              icon={<AlertTriangle className="h-5 w-5 text-high-priority" />}
+              description="Users requiring attention"
+              tooltip="Users marked as high priority who need immediate attention or follow-up"
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+            />
 
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Using Platform</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold">{usingPlatformCount}</div>
-            </CardContent>
-          </Card>
+            <MetricCard
+              title="Using Platform"
+              value={usingPlatformCount}
+              icon={<UserCheck className="h-5 w-5 text-primary" />}
+              description="Active platform users"
+              tooltip="Users with calls in last 30 days - actively using the platform features"
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+            />
 
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Needs Contact</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold">{needsContactCount}</div>
-            </CardContent>
-          </Card>
-        </div>
+            <MetricCard
+              title="Needs Contact"
+              value={needsContactCount}
+              icon={<Clock className="h-5 w-5 text-muted-foreground" />}
+              description="Requires follow-up"
+              tooltip="Users who haven't been contacted recently and may need follow-up communication"
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+            />
+          </div>
+        </TooltipProvider>
 
         {/* Subscription Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-green-200 bg-green-50/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Subscriptions</CardTitle>
-              <CreditCard className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold text-green-700">{activeSubscriptionsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {users.length > 0 ? `${Math.round((activeSubscriptionsCount / users.length) * 100)}% of total users` : 'No users yet'}
-              </p>
-            </CardContent>
-          </Card>
-          
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-blue-200 bg-blue-50/50 cursor-pointer hover:bg-blue-100/50 transition-colors" onClick={() => setShowMRR(!showMRR)}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{showMRR ? 'Monthly Recurring Revenue' : 'Paying Subscribers'}</CardTitle>
-              <DollarSign className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold text-blue-700">{showMRR ? `$${mrr}` : payingSubscribersCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {showMRR ? `${starterCount} starter ($15) + ${professionalCount} pro ($50)` : 'Starter & Professional plans'}
-              </p>
-            </CardContent>
-          </Card>
+        <TooltipProvider delayDuration={100}>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <MetricCard
+              title="Active Subscriptions"
+              value={activeSubscriptionsCount}
+              icon={<CreditCard className="h-5 w-5 text-green-600" />}
+              description={users.length > 0 ? `${Math.round((activeSubscriptionsCount / users.length) * 100)}% of total users` : 'No users yet'}
+              tooltip="Number of users with active paid subscriptions who are currently being charged"
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-green-200 bg-green-50/50"
+            />
+            
+            <div onClick={() => setShowMRR(!showMRR)} className="cursor-pointer">
+              <MetricCard
+                title={showMRR ? 'Monthly Recurring Revenue' : 'Paying Subscribers'}
+                value={showMRR ? `$${mrr}` : payingSubscribersCount}
+                icon={<DollarSign className="h-5 w-5 text-blue-600" />}
+                description={showMRR ? `${starterCount} starter ($15) + ${professionalCount} pro ($50)` : 'Starter & Professional plans'}
+                tooltip={showMRR ? 'Total recurring revenue generated per month from all active subscriptions' : 'Click to toggle between subscriber count and monthly revenue view'}
+                className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 transition-colors"
+              />
+            </div>
 
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-purple-200 bg-purple-50/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Free Tier Users</CardTitle>
-              <Zap className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold text-purple-700">{freeUserCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Potential conversions
-              </p>
-            </CardContent>
-          </Card>
+            <MetricCard
+              title="Free Tier Users"
+              value={freeUserCount}
+              icon={<Zap className="h-5 w-5 text-purple-600" />}
+              description="Potential conversions"
+              tooltip="Users on the free tier who could potentially be converted to paid plans"
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-purple-200 bg-purple-50/50"
+            />
 
-          <Card className="p-4 shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-orange-200 bg-orange-50/50">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 p-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Past Due</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="text-2xl font-semibold text-orange-700">{pastDueCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Requires attention
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+            <MetricCard
+              title="Past Due"
+              value={pastDueCount}
+              icon={<AlertTriangle className="h-5 w-5 text-orange-600" />}
+              description="Requires attention"
+              tooltip="Users with overdue payments who need immediate attention for billing issues"
+              className="shadow-[0_2px_6px_rgba(0,0,0,0.06)] border-orange-200 bg-orange-50/50"
+            />
+          </div>
+        </TooltipProvider>
 
-        {/* Affiliate Tracker */}
-        <AffiliateTracker 
-          affiliates={affiliates}
-          onMarkPaid={handleMarkPaid}
-        />
+
 
         {/* Filters */}
         <Card className="mb-8 shadow-[0_2px_6px_rgba(0,0,0,0.06)]">
